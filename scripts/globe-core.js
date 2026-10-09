@@ -1,3 +1,4 @@
+// The globe, copied from the presentation's engine (tools/extract_map_code.py): geography, WebGL dots and hairlines.
 "use strict";
 const D = window.D, $ = id => document.getElementById(id), clamp = (v, a = 0, b = 1) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a)*t;
 const ease = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2, D2R = Math.PI/180, PI = Math.PI;
@@ -129,82 +130,3 @@ function drawLines(o, {tr = 2, alpha = .2}) { if (!o || !o.n || alpha < .005) re
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.drawArrays(gl.LINES, 0, o.n); }
 function drawBg(a) { gl.useProgram(PB.p); gl.uniform2f(PB.U.uC, CAM.cx, CAM.cy); gl.uniform2f(PB.U.uRes, W, H); gl.uniform1f(PB.U.uRad, CAM.R); gl.uniform1f(PB.U.uDPR, DPR); gl.uniform1f(PB.U.uA, a);
   gl.bindBuffer(gl.ARRAY_BUFFER, QUAD); gl.enableVertexAttribArray(PB.A.aP); gl.vertexAttribPointer(PB.A.aP, 2, gl.FLOAT, false, 0, 0); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.enable(gl.BLEND); }
-
-// =================================================================== the census line (2D), in a fixed frame
-const lnc = $("ln"), g = lnc.getContext("2d"), fxc = $("fx"), fx = fxc.getContext("2d"), ovc = $("ov"), ov = ovc.getContext("2d");
-const NV = window.NIMX, NY0 = 2001, PROJ = D.proj, NVF = NV.map((v, i) => v != null ? v : (NV[i - 1] + NV[i + 1])/2);
-const nimAt = x => { const f = clamp(x - NY0, 0, NVF.length - 1.0001), i = Math.floor(f), u = f - i, s = u*u*(3 - 2*u); return NVF[i] + (NVF[Math.min(i + 1, NVF.length - 1)] - NVF[i])*s; };
-let L = {}, LC = {x: 2015.2, span: 9}, YOFF = 0;
-// the line's own camera: it follows the pen up close, pulls back to the whole line at 2026, then dives into 2024-25
-function layout() { const nar = W < 760; L = {nar, yt: nar ? 110 : 130, yb: nar ? Math.round(H*.6) : H - 200, vlo: -1e6, vhi: 3e6, ax: nar ? 46 : 74};
-  L.X = y => W/2 + (y - LC.x)/LC.span*W*(nar ? .86 : .8); L.Y0 = v => L.yb - (v - L.vlo)/(L.vhi - L.vlo)*(L.yb - L.yt); L.Y = v => L.Y0(v) + YOFF; L.ppy = () => L.X(NY0 + 1) - L.X(NY0); }
-const FOLLOW = px => ({x: clamp(px - 2.2, 2015.2, 2022.4), span: 9}), WHOLE = () => ({x: 2018.7, span: L.nar ? 19.5 : 17.2}), DIVE = {x: 2024.5, span: 2.3};
-const lcMix = (a, b, u) => ({x: lerp(a.x, b.x, u), span: Math.exp(lerp(Math.log(a.span), Math.log(b.span), u))});
-const STR = Array.from({length: 120}, () => ({b: gauss()*.5, a: .3 + rnd()*.9, f: 1.2 + rnd()*3.2, ph: rnd()*6.28, f2: .4 + rnd()*.9, ph2: rnd()*6.28, al: .16 + rnd()*.3, c: BLUES[Math.floor(rnd()*BLUES.length)], e: (rnd() - .5)*2, w: .45 + rnd()*.45, dash: 3 + rnd()*3}));
-const PEN = (() => { const tab = [NY0]; let x = NY0, t = 0; const dt = 1/60, sm = (a, b, v) => { const k = clamp((v - a)/(b - a)); return k*k*(3 - 2*k); };
-  while (x < 2025) { const v = (1.25 - .75*Math.exp(-(((x - 2020.2)/.8)**2)) - .55*sm(2023.6, 2024.9, x))*(.3 + .7*sm(0, 1.2, t)); x = Math.min(2025, x + v*dt); t += dt; tab.push(x); } return tab; })();
-const penX = t => { const f = clamp(t*60, 0, PEN.length - 1), i = Math.floor(f); return lerp(PEN[i], PEN[Math.min(PEN.length - 1, i + 1)], f - i); }, PEN_T = (PEN.length - 1)/60;
-const SPOTS = []; let HOVE = null;
-function drawLine(s, now) { g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, W, H); const a = s.chart; if (a < .01 && s.strands < .01) return;
-  // intro: strands drift in from the left edge and gather where the line begins
-  if (s.strands > .01 && s.pen <= NY0 + .02) { const xm = L.X(NY0), ym = L.Y(NV[0]); for (const st of STR) { g.beginPath(); for (let k = 0; k <= 60; k++) { const u = k/60, X = lerp(-40, xm, u), j = u*u*(3 - 2*u)*s.strands, Y = lerp(H*.5 + st.e*H*.42 + 30*Math.sin(now/2400 + st.ph + u*3), ym + st.b*8, j); k ? g.lineTo(X, Y) : g.moveTo(X, Y); }
-    g.strokeStyle = st.c; g.globalAlpha = Math.min(1, st.al*1.6)*Math.min(1, s.strands*1.6); g.lineWidth = st.w; g.setLineDash([]); g.lineCap = "round"; g.stroke(); } g.setLineDash([]); g.globalAlpha = 1; }
-  if (a < .01) return; g.save(); g.globalAlpha = a;
-  g.font = "11px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; g.textAlign = "right"; g.fillStyle = "#66738a";
-  for (let v = -1e6; v <= 3e6; v += 5e5) { const y = L.Y(v), major = v % 1e6 === 0; if (y < 60 || y > H - 40) continue; g.strokeStyle = v === 0 ? "rgba(236,230,216,.35)" : major ? "rgba(236,230,216,.08)" : "rgba(236,230,216,.035)"; g.lineWidth = v === 0 ? 1.2 : 1; g.beginPath(); g.moveTo(L.ax, y); g.lineTo(W - 16, y); g.stroke();
-    if (major) g.fillText(v === 0 ? "0" : (v > 0 ? "+" : "−") + Math.abs(v/1e6) + "M", L.ax - 8, y + 4);
-    }
-  g.textAlign = "left"; g.fillStyle = "#ece6d8"; g.font = `400 ${L.nar ? 19 : 26}px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif`; g.fillText("Net international migration to the United States, 2001–2026", L.nar ? 16 : L.ax, L.yt - 58);
-  g.font = "11px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; g.fillStyle = "#a7b0bf"; 
-  g.textAlign = "center"; const yb2 = L.Y0(L.vlo) + Math.max(0, YOFF*0); for (let y = 2000; y <= 2026; y++) { if (y % 2) continue; const X = L.X(y); if (X < L.ax || X > W - 10) continue; g.fillStyle = y >= 2020 ? "#ff5a40" : "#66738a"; g.fillRect(X, L.yb + 10, 1, 5); g.fillText(String(y), X, L.yb + 30); }
-  const x1 = s.pen, step = LC.span/420, xs = Math.max(NY0, LC.x - LC.span*.7); g.lineCap = "round";
-  if (s.op < .99 && x1 > NY0 + .01) { g.beginPath(); let pen = false; const gap = [], GA = 9999, GB = 9999; /* no gaps: every year is drawn as published */ for (let x = NY0; x <= x1 + 1e-6; x += step) { const xx = Math.min(x, x1), X = L.X(xx), Y = L.Y(nimAt(xx)); if (xx > GA && xx < GB) { gap.push([X, Y]); pen = false; continue; } pen ? g.lineTo(X, Y) : g.moveTo(X, Y); pen = true; }
-    g.strokeStyle = "#8fd0ee"; g.globalAlpha = a*(1 - s.op); g.lineWidth = 1.6; g.lineJoin = "round"; g.setLineDash([]); g.stroke();
-    if (gap.length > 1) { g.beginPath(); gap.forEach(([X, Y], k) => k ? g.lineTo(X, Y) : g.moveTo(X, Y)); g.setLineDash([2, 4]); g.lineWidth = 1.2; g.stroke(); g.setLineDash([]); }
-
-    const XP = L.X(x1), YP = L.Y(nimAt(x1)); if (x1 < 2025) { g.fillStyle = "#e9f6ff"; g.beginPath(); g.arc(XP, YP, 2.2, 0, 6.283); g.fill(); } }
-  g.setLineDash([]); g.globalAlpha = a;
-  // visas issued, 2000-2025, on its own scale (4 visas to 1 migrant, sharing zero)
-  if (false) { const xe = Math.min(s.pen, 2025), yv = v => L.Y(v/4); g.globalAlpha = a*(1 - s.op); g.strokeStyle = "rgba(217,211,198,.72)"; g.lineWidth = 1.3; g.beginPath();
-    for (let x = 2000; x <= xe + 1e-6; x += .04) { const xx = Math.min(x, xe), X = L.X(xx), Y = yv(visAt(xx)); x === 2000 ? g.moveTo(X, Y) : g.lineTo(X, Y); } g.stroke();
-    g.fillStyle = "#e6e0d2"; for (let y = 2000; y <= xe; y++) { g.beginPath(); g.arc(L.X(y), yv(VIS0[y - 2000]), 2.1, 0, 6.283); g.fill(); }
-    g.font = "11px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; g.textAlign = "left"; g.fillStyle = "rgba(230,224,210,.85)"; 
-    if (s.pen > 2001.6) { g.fillStyle = "rgba(127,192,220,.9)"; g.fillText("Net international migration", L.X(2001) - 4, L.Y(NV[0]) + 30); } if (s.pen > 2010.4) { g.fillStyle = "rgba(127,192,220,.6)"; g.textAlign = "center"; g.fillText("no 2010 estimate", L.X(2010), L.Y(nimAt(2010)) - 12); g.textAlign = "left"; } g.globalAlpha = a; }
-  // the line is made of people: it opens into dots, 1 dot = 1,000 people, none touching
-  if (s.op > .01) { const ppy = L.ppy(), r0 = .85, by = [], x0v = LC.x - LC.span*.7, x1v = LC.x + LC.span*.7, dsp = s.disp || 0, rd = s.red || 0, gr = s.grow || 0, keep = gr && dsp > 0 ? Math.max(.025, 1 - .975*Math.pow(dsp, .6)) : 1, big = gr && dsp > .08;
-    for (let k = 0; k < 8; k++) by.push(new Path2D());
-    for (const d of DOTS) { if (d.rr > keep || d.x < x0v || d.x > x1v) continue; let X = L.X(d.x), Y = L.Y(nimAt(d.x)) + d.v*ppy*s.op*VSQ*1.6, r = r0;
-      if (dsp > 0) { const dist = (60 + d.sp*Math.max(W, H)*.95)*Math.pow(dsp, 1.5); X += Math.cos(d.ang)*dist; Y += Math.sin(d.ang)*dist; r = r0 + gr*dsp*dsp*(10 + (d.rr/keep)*34); }
-      if (Y < -90 || Y > H + 90 || X < -90 || X > W + 90) continue; const pth = by[d.k]; if (big) { pth.moveTo(X + r, Y); pth.arc(X, Y, r, 0, 6.283); } else pth.rect(X - r, Y - r, 2*r, 2*r); }
-    g.globalAlpha = a*s.op; for (let k = 0; k < 8; k++) { g.fillStyle = mixRed(TFAM[0][k], REDS[k], rd); g.fill(by[k]); } g.globalAlpha = a; }
-  // 2026: the published projections, as strands coming loose
-  if (s.fan > .01 && s.op < .99) { g.globalAlpha = a*(1 - s.op); const y0 = L.Y(NV[NV.length - 1]), X0 = L.X(2025), X1 = L.X(2026); let q = 3; const r2 = () => (q = (Math.imul(q, 1664525) + 1013904223) >>> 0)/4294967296;
-    for (const p of PROJ) { const n = p.lo === p.hi ? 7 : 26; for (let k = 0; k < n; k++) { const v = p.lo === p.hi ? p.lo + (r2() - .5)*6e4 : p.lo + r2()*(p.hi - p.lo), Xe = lerp(X0, X1, s.fan), Ye = lerp(y0, L.Y(v), s.fan);
-      g.beginPath(); g.moveTo(X0, y0); g.bezierCurveTo(X0 + (Xe - X0)*.5, y0, X0 + (Xe - X0)*.5, Ye, Xe, Ye); g.strokeStyle = p.lo === p.hi ? "rgba(242,185,80,.5)" : "rgba(157,211,238,.3)"; g.lineWidth = .55; g.stroke(); } }
-    g.setLineDash([]); g.globalAlpha = a*clamp((s.fan - .6)/.4)*(1 - s.op); g.font = "11px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; const R0 = L.nar ? "right" : "left", dx = L.nar ? -8 : 12; g.textAlign = R0;
-    const ce = PROJ.find(p => /Census/.test(p.src)), cb = PROJ.find(p => /Budget/.test(p.src)), br = PROJ.find(p => p.lo !== p.hi);
-    const lab = (v, t, c) => { const Y = L.Y(v); g.fillStyle = c; g.beginPath(); g.arc(X1, Y, 2.6, 0, 6.283); g.fill(); g.fillText(t, X1 + dx, Y + 4); };
-    if (cb) lab(cb.lo, L.nar ? "CBO" : `CBO  +${Math.round(cb.lo/1e3)}k (calendar year)`, "#f2b950"); if (ce) lab(ce.lo, L.nar ? "Census" : `Census Bureau  +${Math.round(ce.lo/1e3)}k`, "#f2b950");
-    if (br) { const ya = L.Y(br.hi), yb = L.Y(br.lo); g.strokeStyle = "rgba(157,211,238,.6)"; g.lineWidth = 1; g.beginPath(); g.moveTo(X1 + 4, ya); g.lineTo(X1 + 4, yb); g.stroke(); g.fillStyle = "#9dd3ee"; g.fillText(L.nar ? "Brookings" : `Brookings/AEI  ${fmt(br.lo)} to +${Math.round(br.hi/1e3)}k`, X1 + dx, (ya + yb)/2); if (!L.nar) { g.fillStyle = "#66738a"; g.fillText("(scenarios)", X1 + dx, (ya + yb)/2 + 15); } }
-    g.textAlign = "left"; g.fillStyle = "#66738a"; g.globalAlpha = a*clamp((s.fan - .6)/.4)*(1 - s.op); g.fillText("2026 · projected", X1 - 30, L.Y(L.vhi) - 6); }
-  SPOTS.length = 0; g.globalAlpha = a*(1 - s.op);
-  for (const e of INFL) { const gv = (s.infl && s.infl[e.id]) || 0; if (gv <= .004 || e.x > x1 + 1e-6) continue; const X = L.X(e.x), Y = L.Y(nimAt(e.x)), tw = .86 + .14*Math.sin(now/240), R = (10 + 34*gv)*tw; INFL_POS[e.id] = [X, Y, gv, performance.now()];
-    const gr = g.createRadialGradient(X, Y, 0, X, Y, R); gr.addColorStop(0, "rgba(255,236,190," + (.95*Math.min(1, gv*1.4)) + ")"); gr.addColorStop(.3, "rgba(242,185,80," + (.5*gv) + ")"); gr.addColorStop(1, "rgba(242,185,80,0)");
-    g.globalCompositeOperation = "lighter"; g.fillStyle = gr; g.beginPath(); g.arc(X, Y, R, 0, 6.283); g.fill(); g.globalCompositeOperation = "source-over"; g.fillStyle = "#fffaf0"; g.beginPath(); g.arc(X, Y, 2.4, 0, 6.283); g.fill();
-    g.strokeStyle = "rgba(242,185,80," + (.7*gv) + ")"; g.lineWidth = 1; g.beginPath(); g.arc(X, Y, 6 + 16*(1 - gv) + 8, 0, 6.283); g.stroke();
-    g.font = "500 12px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; g.textAlign = e.side > 0 ? "left" : "right"; g.fillStyle = "rgba(242,185,80," + Math.min(1, .35 + gv) + ")"; g.fillText(e.label.toUpperCase(), X + e.side*20, Y + e.dy); }
-  if (s.spotsHint > .01) { g.globalAlpha = a*s.spotsHint; g.font = "11px 'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-serif"; g.fillStyle = "#f2b950"; g.textAlign = "left"; g.fillText(L.nar ? "✦ tap a glowing spot" : "✦ click a glowing spot to see what was done, and where", L.nar ? 16 : L.ax, L.yt - 10); }
-  g.restore(); }
-
-// the line's people: every year as dots, 1 dot = 1,000 people, scattered around the line by dart-throwing so no two touch (year units, as before);
-// the 2024 and 2025 dots each belong to a county, weighted by where the Census counted them
-const DOT = 100, DMIN = .0125, SIG = .08, VSQ = .62, DOTS = [], CROWD = [];
-{ sd = 21; const fam = TFAM[0];   // one dot per 100 people, scattered about the line; heavier years make a thicker ribbon
-  NV.forEach((nv, yi) => { const yr = NY0 + yi; if (nv == null) return; const a0 = yr - .5, a1 = Math.min(2025, yr + .5), n = Math.round(Math.max(0, nv)/DOT), th = .55 + .9*Math.max(0, nv)/2.7e6; let pick = null;
-    if (yr >= 2024) { const ni = D.years.indexOf(String(yr)), w = D.counties.map(c => Math.max(0, c[2][ni])), cum = []; let t = 0; for (const v of w) cum.push(t += v); pick = () => { const r = rnd()*t; let lo = 0, hi = cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (cum[m] < r) lo = m + 1; else hi = m; } return D.counties[lo]; }; }
-    for (let i = 0; i < n; i++) { const x = a0 + rnd()*(a1 - a0), v = gauss()*SIG*th, kk = Math.floor(rnd()*fam.length), d = {x, v, c: fam[kk], k: kk, yr, ang: rnd()*6.2832, sp: .25 + rnd()*.75, rr: rnd()};
-      if (pick) { const c = pick(); d.to = v3(c[0] + gauss()*.12, c[1] + gauss()*.09); d.d = rnd()*.35; CROWD.push(d); } DOTS.push(d); } }); }
-function drawCrowd(s) { fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, fxc.width, fxc.height); if (s.fly < .001 || s.cens < .01) return; const by = new Map(), ppy = L.ppy(), r0 = Math.max(.8, DMIN*ppy*.4);
-  for (const d of CROWD) { const cx = L.X(d.x), cy = L.Y(nimAt(d.x)) + d.v*ppy*VSQ, u = ease(clamp((s.fly - d.d)/.65)), q = proj(d.to), x = lerp(cx, q[0], u), y = lerp(cy, q[1], u), r = lerp(r0, 1.15, u)*DPR;
-    if (!by.has(d.c)) by.set(d.c, new Path2D()); const p = by.get(d.c); p.moveTo(x*DPR + r, y*DPR); p.arc(x*DPR, y*DPR, r, 0, 6.283); }
-  fx.globalAlpha = s.cens; for (const [c, p] of by) { fx.fillStyle = c; fx.fill(p); } fx.globalAlpha = 1; }

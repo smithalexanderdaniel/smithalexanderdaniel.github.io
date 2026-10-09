@@ -1,49 +1,21 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Who Are We, at 250</title>
-<link rel="stylesheet" href="css/presentation.css"></head><body>
-<div id="bgc"></div>
-<div class="ph" id="img_p1" hidden aria-hidden="true"></div><div class="ph" id="img_p2" hidden aria-hidden="true"></div><div class="ph" id="img_p3" hidden aria-hidden="true"></div>
-<div class="ph" id="img_p4" hidden aria-hidden="true"></div><div class="ph" id="img_p5" hidden aria-hidden="true"></div><div class="ph" id="img_p6" hidden aria-hidden="true"></div>
-<canvas id="gl" aria-label="A globe: visa arcs, green-card arcs, and removals from the United States"></canvas>
-<canvas id="ov" aria-hidden="true"></canvas><canvas id="ln" aria-label="Net international migration to the United States, 2011 to 2025, from the Census Bureau"></canvas><canvas id="fx" aria-hidden="true"></canvas>
-<div class="wash" id="wash_r"></div><div class="ph" id="img_ice" hidden aria-hidden="true"></div><div class="wash" id="wash_w"></div><canvas id="fin" aria-hidden="true"></canvas>
-<div class="ui" id="note" aria-live="polite"></div><div class="ui" id="cap" aria-live="polite"></div><div class="ui" id="src"></div>
-<div class="ui" id="panels" hidden></div><div class="ui" id="pairhd" hidden></div><div class="ui" id="corner"></div><div id="deck" hidden></div><div id="states" hidden><canvas id="smc" aria-label="Map of the United States: hover a state to highlight it, click it to see its immigration since 2001"></canvas><div id="smpanel" aria-live="polite"></div><div id="smtip"></div><div id="smleg" aria-label="Map layers"></div></div><div class="ui" id="xstat" hidden></div>
-<div id="audit" hidden><div class="in">
-<h2>Algorithmic Forensics</h2>
-<h3>Prompt engineering strategy</h3>
-<p>We used AI as a supervised analyst. Prompts were directive and constraint-based. We required AI to work only from raw government files we downloaded. Every derived dataset was saved as JSON recording its source file. When outputs drifted, we corrected with explicit constraints.</p>
-<h3>Auditing AI data manipulation</h3>
-<p>Following our Chain of Custody Audit Card, we archived raw files unaltered with a manifest of their origins and checksums. Every transformation runs through a script that logs what it did: which row it read as the header, which columns it left as text, and which source file each year came from. Nothing is rounded or imputed. We audited outputs by comparing each new version of a graph against the previous one.</p>
-<h3>Mitigating bias and hallucination</h3>
-<p>Our audit caught one problem directly. AI swapped the Census’s April–June 2020 figure for a full-year number from an older release, and that changed the shape of the graph. We reverted it and now flag partial years instead of altering them. The AI also flagged claims the data didn’t support, such as “negative immigration in 2026” and “a 300% rise”.</p>
-<h3>Methodologies behind the visualized metrics</h3>
-<ul>
-<li>Migration: Census net international migration, years ending 1 July. Data for 2001–2009 come from the 2009 estimates release, 2010–2019 from the 2020 release and 2020–2025 from the 2025 release. On the county map, one dot = 100 people.</li>
-<li>Visas: State Department visas issued in 2024, one dot = 50 visas. Arcs route through likely ports of entry; they illustrate, but do not record, journeys.</li>
-<li>Green cards: DHS data for the 200 busiest counties.</li>
-<li>Detention: ICE average daily detention by facility, plotted at ZIP code centres.</li>
-<li>Removals: removals that began with an ICE arrest.</li>
-</ul>
-<p><b>Limitations.</b> Dots are placed approximately around ZIP code and county centres. Visa, green-card and ICE data run on fiscal years, while the Census counts years ending 1 July.</p>
-</div></div>
-<div class="ui" id="appx"><h2>Sources</h2><ol>
-<li>Net international migration, 2001–2025, years to 1 July: U.S. Census Bureau Population Estimates, Vintages 2009 (2001–2009), 2020 (2010–2019) and 2025 (2020–2025), for the nation, states and counties; 2010 and 2020 cover April–June only. 2026 projections: Census Bureau (+321,000), Congressional Budget Office (+650,000), Brookings / AEI (−925,000 to +185,000, scenarios).</li>
-<li>Maps: within each county, dots sit on census tracts in proportion to foreign-born residents (American Community Survey 2020–2024, table B05002), showing where immigrants live today. Census Gazetteer tract, county and ZIP points; Census cartographic boundary states and counties, 2024.</li>
-<li>Visas issued, 2024: U.S. Department of State, nonimmigrant visas by nationality. Ports of entry drawn by each world region’s 2024 arrivals by port (NTTO I-94); routes illustrate, but do not record, journeys.</li>
-<li>Green cards: DHS Office of Homeland Security Statistics — 2024 by county and country of birth (200 busiest counties) plus Yearbook Supplemental Table 1 (state by country), 99.3% of 1.36 million mapped; state totals 2004–2024 from Yearbook Table 4.</li>
-<li>H-1B approvals, 2009–2025: USCIS H-1B Employer Data Hub, at the employer’s ZIP code. International students, 2024: NCES IPEDS fall enrollment, U.S. nonresidents, at each campus.</li>
-<li>ICE detention, 2019–2025: ICE detention statistics, average daily population by facility, at ZIP code points.</li>
-<li>ICE removals, 2022–2025: Deportation Data Project, removals that began with an ICE arrest, by state of arrest and country; on the globe each leaves from an ICE facility in its state (a placement: the data give only the state).</li>
-<li>BPS removals, 2014–2024: DHS Office of Homeland Security Statistics, enforcement monthly tables (last release November 2024) — removals after a border arrest; split by Border Patrol sector and by country using DHS encounter and citizenship shares (estimates).</li>
-<li>References: Brookings Institution, “How did the post-pandemic migration surge affect labor and housing markets?”; Paul Krugman, “ICEing the US economy”; ACLU, “Border Patrol agents replace top leadership at ICE offices despite human rights violations” and “Detained immigrants detail physical abuse and inhumane conditions at largest immigration detention center in the U.S.”; The New York Times, 12 February 2026 and 25 September 2026; Houston Public Media, “Texans divided on immigration policies and border security, new survey finds”, 31 January 2025; Office of the Texas Governor, “Texas transports over 100,000 migrants to sanctuary cities”.</li>
-<li>Photograph of detained families: South Texas Family Residential Center, Dilley, Texas, 24 January 2026. AP Photo/Brenda Bazán.</li>
-</ol></div>
-<div class="ui" id="notes" aria-label="Speech" hidden></div>
-<div class="ui" id="nav"><button type="button" id="navprev" aria-label="Previous slide">‹</button><span id="count"></span><button type="button" id="navnext" aria-label="Next slide">›</button></div>
-<div class="ui" id="start"><button type="button" id="go">Start</button><p><kbd>Space</kbd> next &nbsp; <kbd>←</kbd> back &nbsp; <kbd>F</kbd> full screen &nbsp; · &nbsp; move the mouse to the bottom of the screen for arrows</p></div>
-<script src="scripts/load.js" data-base=""
-  data-json="IMGS:data/images.json,D:data/core.json,NIMJ:data/census-net-migration-2001-2025.json,DET:data/ice-detention.json,USB:data/us-borders.json,LPRG:data/green-cards-2024-counties.json,LPRG_REST:data/green-cards-2024-rest.json,BP:data/bps-removals-2024.json,PORTS_R:data/visa-ports-by-region-2024.json,STS:data/states.json"
-  data-run="scripts/engine.js,scripts/director.js"></script>
+<title>Immigration &amp; Deportation in America, 2026</title>
+<meta name="description" content="Twenty-five years of immigration and deportation in the United States, mapped and graphed from government data.">
+<link rel="stylesheet" href="css/site.css?v=20261009q"></head><body>
+<nav class="nav" aria-label="Site"><a class="brand" href="index.html">Immigration &amp; Deportation in America</a>
+<ul><li><a class="link" href="index.html" aria-current="page">About</a></li><li><a class="link" href="team.html">Team</a></li><li><a class="link" href="map.html">Map</a></li><li><a class="link" href="graphs.html">Graphs</a></li><li><a class="link" href="data.html">Data</a></li><li><a class="link" href="methods.html">Methods</a></li></ul></nav>
+<main class="page">
+<h1>Immigration &amp; Deportation in America, 2026</h1>
+
+<p class="lede">In 2026 the United States turned 250, and to many Americans the country feels unrecognizable. We started with a simple question: who are we? America is a country of immigrants, so we looked to immigration for an answer.</p>
+<p>Rather than study the past 250 years, we studied the past twenty-five. We mapped where people came from and where they settled, using the established paths to living in America, visas and green cards, alongside the closest measure of what actually happened: the Census Bureau’s count of net international migration.</p>
+<p>Plotted over time, the numbers tell an unusual story. Through the 2010s the trends were stable. In 2020 the pandemic brought immigration almost to a stop. Then, instead of simply recovering, it surged. By 2024 net international migration reached 2.7 million, the highest of any year since 2001. The very next year it fell by more than half, and projections for 2026 include a severe decline and potentially negative immigration.</p>
+<p>The steep decline in immigration correlates with an increase in ICE detentions and deportations. This relationship led us to create a parallel map of ICE and Customs and Border Protection activity and the growing number of people held in ICE detention to explore relationships in these opposing data sets.</p>
+<p>Reviewing the maps reveals interesting contradictions and correlations. Just as a handful of US cities receive a majority of immigrants, a relatively small number of countries receive a majority of deportations. These concentrations of inflow and outflow, lead to resource strain and reactionary politics. For example, the small town of Eagle Pass, Texas has a population of 29,000, but during elevated periods of immigration may receive thousands of incoming immigrants.</p>
+<p>Just as a handful of US states receive migrants from a wide range of nations, A handful of states receive most new arrivals, and governments respond with reactionary policies. Immigration is a measure of American identity. Once stable, it has become erratic, and the speed of that change may be part of why the country feels unfamiliar to its own people. An inverted version of this problem appears in the deportation data: deportations are not evenly distributed or aligned with country of origin, and in some cases immigrants are being deported to countries to which they have no connection.</p>
+<p>These misalignments within the immigration and migration system can lead to humanitarian crises with real, human costs. Students pulled into unmarked vans by masked police, potentially dangerous clashes between federal and municipal police agencies, refugees returned to the dangers they fled, and hidden human rights violations in a growing network of prison camps. As a country of immigrants, these crises challenge our shared sense of identity, raising the questions: who are we, how do we relate to one another, and what does it mean to be an American?</p>
+
+<p><a href="data.html">Data &amp; Sources →</a><br><a href="methods.html">Tech Stack and Data Forensics →</a></p>
+</main>
 </body></html>

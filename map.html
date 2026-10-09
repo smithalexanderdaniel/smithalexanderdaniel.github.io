@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Map · Immigration &amp; Deportation in America</title>
+<link rel="stylesheet" href="css/site.css?v=20261009q"><link rel="stylesheet" href="css/map.css?v=20261009q"></head><body class="dark mappage">
+<nav class="nav" aria-label="Site"><a class="brand" href="index.html">Immigration &amp; Deportation in America</a>
+<ul><li><a class="link" href="index.html">About</a></li><li><a class="link" href="team.html">Team</a></li><li><a class="link" href="map.html" aria-current="page">Map</a></li><li><a class="link" href="graphs.html">Graphs</a></li><li><a class="link" href="data.html">Data</a></li><li><a class="link" href="methods.html">Methods</a></li></ul></nav>
+
+<canvas id="gl" aria-hidden="true"></canvas>
+<div id="states"><canvas id="smc" aria-label="Map of the United States: hover a state to highlight it, click it to see its immigration since 2001"></canvas><div id="smpanel" aria-live="polite"></div><div id="smtip"></div></div>
+<canvas id="ov" aria-hidden="true"></canvas>
+
+<div class="mui" id="levels" role="group" aria-label="Zoom level"><button type="button" data-z="0">United States</button><button type="button" data-z="1">World</button><button type="button" data-z="2">Immigration v Deportation</button><span id="hint">Scroll to zoom out</span></div>
+<div class="mui" id="legend" aria-label="Map layers"><div id="legrows"></div>
+  <div class="sc" id="scwrap"><input type="range" id="smscrub" min="2001" max="2025" step="0.01" value="2025" aria-label="Year"><b id="smyr">2025</b></div>
+  <p id="legunit"></p></div>
+<div class="mui" id="ctip" role="status"></div>
+<div class="mui" id="cpanel" aria-live="polite"></div>
+<p class="mui" id="loading">Loading the map…</p>
+
+<script src="scripts/load.js?v=20261009q" data-v="20261009q" data-base=""
+  data-json="D:data/core.json,STS:data/states.json,DET:data/ice-detention.json,LPRG:data/green-cards-2024-counties.json,LPRG_REST:data/green-cards-2024-rest.json,BP:data/bps-removals-2024.json,PORTS_R:data/visa-ports-by-region-2024.json"
+  data-run="scripts/globe-core.js,scripts/map-layers.js,scripts/map.js"></script>
+</body></html>

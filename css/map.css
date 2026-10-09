@@ -1,0 +1,45 @@
+/* The Map page: the US map, the globe and the globes by category share one view under the navbar */
+body.mappage{overflow:hidden;height:100vh}
+#gl,#ov,#states{position:fixed;left:0;right:0;top:var(--nav-h);bottom:0}
+#gl,#ov{width:100%;height:calc(100% - var(--nav-h));display:block}
+#gl{z-index:1;opacity:0;transition:opacity .3s}
+#states{z-index:2;pointer-events:none}
+#smc{position:absolute;inset:0;width:100%;height:100%;cursor:default;pointer-events:auto}#smc.on{cursor:pointer}
+#ov{z-index:3;pointer-events:none}
+.mui{position:fixed;z-index:10}
+#loading{left:50%;top:50%;transform:translate(-50%,-50%);color:var(--ink2);font-size:14px;margin:0}
+
+
+/* the levels, at the top of the view, centred under the navbar */
+#levels{left:50%;transform:translateX(-50%);top:calc(var(--nav-h) + 12px);display:flex;align-items:center;gap:0;flex-wrap:nowrap;white-space:nowrap}
+#levels button{font:12px var(--font);letter-spacing:.06em;color:var(--ink2);background:rgba(5,8,13,.7);border:1px solid var(--rule);padding:7px 12px;cursor:pointer}
+#levels button+button{border-left:0}
+#levels button[aria-pressed=true]{background:var(--ink);color:var(--bg)}
+#levels button:focus-visible{outline:2px solid var(--red);outline-offset:2px}
+#hint{margin-left:14px;font-size:12px;color:var(--ink3)}
+
+/* the legend, a strip along the bottom: the place in view, then each group's layers in a row with that place's numbers, then the timeline */
+#legend{left:0;right:0;bottom:0;display:flex;align-items:center;gap:6px 22px;flex-wrap:wrap;background:rgba(5,8,13,.88);border-top:1px solid rgba(236,230,216,.14);padding:8px clamp(12px,2.4vw,32px) 10px;max-height:40vh;overflow:auto}
+#legrows{display:flex;align-items:center;gap:6px 22px;flex-wrap:wrap;flex:1 1 auto;min-width:0}
+#legend .lh{display:flex;flex-direction:column;min-width:110px;padding-right:14px;border-right:1px solid rgba(236,230,216,.14)}
+#legend .lh b{font:400 16px/1.2 var(--font);color:#fff;white-space:nowrap}
+#legend .lh span{font-size:10.5px;color:var(--ink3)}
+#legend .lg{display:flex;align-items:center;flex-wrap:wrap;gap:2px 4px}
+#legend button{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:3px 6px;cursor:pointer;font:400 12px var(--font);color:var(--ink);text-align:left;white-space:nowrap;transition:opacity .2s}
+#legend button:hover{background:rgba(236,230,216,.06)}#legend button:focus-visible{outline:1px solid var(--ink)}
+#legend button.grp{font-weight:700;letter-spacing:.04em;padding-right:8px}
+#legend button.grp b{font-weight:700}
+#legend button.grp[aria-pressed=true]{color:#fff}#legend button.grp[aria-pressed=true] b{text-decoration:underline;text-underline-offset:4px;text-decoration-color:var(--red)}
+#legend i{width:7px;height:7px;flex:none}
+#legend em{font-style:normal;font-size:11.5px;color:var(--ink2);font-variant-numeric:tabular-nums;margin-left:2px}
+#legend button.off{opacity:.35}#legend button.off i{background:none!important;outline:1px solid var(--ink2)}
+#legend .sc{display:flex;align-items:center;gap:10px;width:clamp(160px,18vw,260px)}
+#legend .sc input{flex:1;accent-color:#8fd3ff;cursor:pointer;margin:0}
+#legend .sc b{font:400 12px var(--font);color:var(--ink);min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
+#legunit{font-size:10.5px;color:var(--ink3);margin:0;white-space:nowrap}
+
+/* the legend carries every number; the state panel, the country panel and the country tip are not shown */
+#smpanel,#cpanel,#ctip{display:none!important}
+#smtip{position:absolute;pointer-events:none;font:400 12px/1.5 var(--font);color:#fff;letter-spacing:.06em;opacity:0;transition:opacity .15s;background:rgba(5,8,13,.85);padding:5px 9px;border-radius:2px}
+
+@media (max-width:760px){#hint{display:none}#levels button{padding:6px 8px;font-size:11px}#legend .lh{border-right:0;min-width:0}}
