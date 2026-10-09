@@ -12,7 +12,7 @@ let LPRG_B = null; const lprgBuf = () => LPRG_B || (LPRG_B = (() => { const line
   const put = (c, ci, lon, lat) => { const to = v3(...cloudPt(c)), from = v3(lon + gauss()*.1, lat + gauss()*.08), col = hex(GOLD[Math.floor(rnd()*GOLD.length)]);
     buf.set(to, o); buf.set(from, o + 3); buf.set(col, o + 6); buf[o + 9] = ci; buf[o + 10] = 6; buf[o + 11] = rnd()*.5; o += 12; };
   for (const f of F) { const [n, lon, lat, v] = f, [c, ci] = cOf(n, f[4]); for (let k = 0; k < v; k++) put(c, ci, lon, lat);
-    if (cnt++ < 260) { const nl = 1 + Math.round(9*Math.sqrt(v/mx)); for (let k = 0; k < nl; k++) { const to = v3(c.lon + gauss()*1.2, c.lat + gauss()*.9), from = v3(lon + gauss()*.25, lat + gauss()*.2); strand(lines, from, to, ARC_HI(angle(from, to))*(.8 + rnd()*.4), hex("#3ddc84"), rnd()*.45); } } }
+    if (cnt++ < 260) { const nl = 1 + Math.round(9*Math.sqrt(v/mx)); for (let k = 0; k < nl; k++) { const to = v3(c.lon + gauss()*1.2, c.lat + gauss()*.9), from = v3(lon + gauss()*.25, lat + gauss()*.2); strand(lines, from, to, ARC_HI(angle(from, to))*(.8 + rnd()*.4), hex("#3ddc84"), rnd()*.45, 24, ci); } } }
   const SP = {}; for (const ab in RS.spread) { const L = RS.spread[ab]; let t = 0; SP[ab] = {L, cum: L.map(p => t += p[2]), t}; }
   for (const f of RS.flows) { const [n, ab, v] = f, [c, ci] = cOf(n, f[3]), s = SP[ab];
     for (let k = 0; k < v; k++) { const r = rnd()*s.t; let lo = 0, hi = s.cum.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (s.cum[m] < r) lo = m + 1; else hi = m; } put(c, ci, s.L[lo][0], s.L[lo][1]); } }
@@ -29,7 +29,7 @@ function typeBuf(t) { if (TBUF[t]) return TBUF[t]; const a = [], L = []; sd = 30
     while (m-- > 0) { if (!port || rnd() < .3) port = pickPort(c, y); pushDot(a, v3(...cloudPt(c)), v3(port[0] + gauss()*.3, port[1] + gauss()*.22), hex(fam[Math.floor(rnd()*fam.length)]), ci, t, rnd()*.45); } });
   const top = C.filter((c, i) => i !== US && c.v[VI][t] > 0).sort((p, q) => q.v[VI][t] - p.v[VI][t]).slice(0, 46), mx = top[0].v[VI][t], col = hex(ARC_COL[t]);
   for (const c of top) { const n = Math.round(3 + 34*Math.sqrt(c.v[VI][t]/mx));   /* each hairline from a port drawn as the dots' are */
-    for (let k = 0; k < n; k++) { const pp = pickPort(c), from = v3(pp[0] + gauss()*.5, pp[1] + gauss()*.35), to = v3(c.lon + gauss()*1.4, c.lat + gauss()*1); strand(L, from, to, ARC_HI(angle(from, to))*(.82 + rnd()*.36), col, rnd()*.45); } }
+    for (let k = 0; k < n; k++) { const pp = pickPort(c), from = v3(pp[0] + gauss()*.5, pp[1] + gauss()*.35), to = v3(c.lon + gauss()*1.4, c.lat + gauss()*1); strand(L, from, to, ARC_HI(angle(from, to))*(.82 + rnd()*.36), col, rnd()*.45, 24, C.indexOf(c)); } }
   return TBUF[t] = {dots: dotBuf(new Float32Array(a)), lines: lnBuf(new Float32Array(L))}; }
 const NIV = t => C.reduce((s, c, i) => i === US ? s : s + c.v[VI][t], 0);
 // removals after a border arrest (CBP: Border Patrol and ports of entry), 2024, one dot per removal (tools/build_bp.py). Kept apart from ICE, in a darker red.
@@ -46,18 +46,18 @@ function bpb() { if (BPB) return BPB; if (!SMB) SMB = smMakeBP(); sd = 2024; con
   const total = BP.countries.reduce((s, c) => s + c[1], 0), buf = new Float32Array(total*12), mx = BP.countries[0][1]; let o = 0;
   for (const [n, v] of BP.countries) { const ci = C.findIndex(c => c.n === n); if (ci < 0) continue; const c = C[ci];
     for (let k = 0; k < v; k++) { buf.set(v3(...cloudPt(c)), o); buf.set(pick(), o + 3); buf.set(hex(BPR[Math.floor(rnd()*BPR.length)]), o + 6); buf[o + 9] = ci; buf[o + 10] = 9; buf[o + 11] = rnd()*.5; o += 12; }
-    const k0 = Math.round(3 + 28*Math.sqrt(v/mx)); for (let k = 0; k < k0; k++) { const from = pick(), to = v3(c.lon + gauss()*1.2, c.lat + gauss()*.8); strand(L, from, to, ARC_HI(angle(from, to))*.78*(.82 + rnd()*.36), hex(BPR[Math.floor(rnd()*BPR.length)]), rnd()*.5, 48); } }
+    const k0 = Math.round(3 + 28*Math.sqrt(v/mx)); for (let k = 0; k < k0; k++) { const from = pick(), to = v3(c.lon + gauss()*1.2, c.lat + gauss()*.8); strand(L, from, to, ARC_HI(angle(from, to))*.78*(.82 + rnd()*.36), hex(BPR[Math.floor(rnd()*BPR.length)]), rnd()*.5, 24, ci); } }
   return BPB = {dots: dotBuf(buf.subarray(0, o)), lines: lnBuf(new Float32Array(L)), n: o/12}; }
 function iceRem() { if (ICER) return ICER; sd = 500 + RI; const F = window.DET.f, yi = window.DET.years.indexOf(2025), fac = {}, L = [];
   F.forEach((f, k) => { const si = STS.detState[k]; if (si < 0 || !(f[2][yi] > 0)) return; const ab = STS.states[si].ab; (fac[ab] = fac[ab] || []).push(f); });
   const from = st => { const Fs = fac[st]; if (!Fs) { const o = D.rem.st[st]; return o ? v3(o[0] + gauss()*.3, o[1] + gauss()*.25) : null; }   /* no facility in the state: near its point */
     let t = 0; for (const f of Fs) t += f[2][yi]; let r = rnd()*t; for (const f of Fs) if ((r -= f[2][yi]) <= 0) return v3(f[0], f[1]); return v3(Fs[0][0], Fs[0][1]); };
   const rows = D.rem.years["2025"], total = rows.reduce((s, r) => s + Math.round(r[2]), 0), buf = new Float32Array(total*12); let o = 0; const byC = new Map();
-  for (const [st, n, v] of rows) { const [c, ci] = remCountry(n); if (!c) continue; const e = byC.get(n) || {c, v: 0, st: {}}; e.v += v; e.st[st] = (e.st[st] || 0) + v; byC.set(n, e);
+  for (const [st, n, v] of rows) { const [c, ci] = remCountry(n); if (!c) continue; const e = byC.get(n) || {c, ci, v: 0, st: {}}; e.v += v; e.st[st] = (e.st[st] || 0) + v; byC.set(n, e);
     for (let m = Math.round(v); m > 0; m--) { const fr = from(st); if (!fr) continue; buf.set(v3(...cloudPt(c)), o); buf.set(fr, o + 3); buf.set(hex(REDS[Math.floor(rnd()*REDS.length)]), o + 6); buf[o + 9] = ci; buf[o + 10] = 9; buf[o + 11] = rnd()*.5; o += 12; } }
   const top = [...byC.values()].sort((p, q) => q.v - p.v).slice(0, 22), mr = top[0].v;
   for (const e of top) { const st = Object.entries(e.st).sort((p, q) => q[1] - p[1])[0][0], k0 = Math.round(3 + 28*Math.sqrt(e.v/mr));
-    for (let k = 0; k < k0; k++) { const fr = from(st); if (!fr) continue; const to = v3(e.c.lon + gauss()*1.2, e.c.lat + gauss()*.8); strand(L, fr, to, ARC_HI(angle(fr, to))*.78*(.82 + rnd()*.36), hex(REDS[Math.floor(rnd()*REDS.length)]), rnd()*.5, 48); } }
+    for (let k = 0; k < k0; k++) { const fr = from(st); if (!fr) continue; const to = v3(e.c.lon + gauss()*1.2, e.c.lat + gauss()*.8); strand(L, fr, to, ARC_HI(angle(fr, to))*.78*(.82 + rnd()*.36), hex(REDS[Math.floor(rnd()*REDS.length)]), rnd()*.5, 24, e.ci); } }
   return ICER = {dots: dotBuf(buf.subarray(0, o)), lines: lnBuf(new Float32Array(L)), n: o/12}; }
 // ICE detention: one dot per 10 people held on an average day, gathered at each facility; a facility's first n dots are shown, so it swells and shrinks year to year
 const DETY = window.DET.years, DETP = []; { let q = 991; const r = () => (q = (Math.imul(q, 1664525) + 1013904223) >>> 0)/4294967296, gs = () => Math.sqrt(-2*Math.log(r() + 1e-9))*Math.cos(6.2832*r());
@@ -74,10 +74,17 @@ function smIn(si, x, y) { const b = SM_BB[si]; if (x < b[0] || x > b[1] || y < b
   for (const r of STS.states[si].r) for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > y) !== (yj > y) && x < (xj - xi)*(y - yi)/(yj - yi) + xi) k = !k; }
   return k; }
 function smHit(lon, lat) { for (let i = 0; i < STS.states.length; i++) if (smIn(i, lon, lat)) return i; return -1; }
+/* the map's three regions, each with its own camera: 0 the lower 48, 1 Alaska, 2 Hawaii (not shown: their cameras are off screen) */
+const SM_AK = STS.states.findIndex(s => s.ab === "AK"), SM_HI = STS.states.findIndex(s => s.ab === "HI"), SM_RG = STS.states.map((s, i) => i === SM_AK ? 1 : i === SM_HI ? 2 : 0);
+const smRegLL = (lon, lat) => lon < -129 || lon > 170 ? (lat > 30 ? 1 : 2) : 0;
+function smRegs(P, n) { const g = new Uint8Array(n); for (let i = 0; i < n; i++) g[i] = smRegLL(Math.atan2(P[3*i], P[3*i + 2])/D2R, Math.asin(clamp(P[3*i + 1], -1, 1))/D2R); return g; }
+/* the state under a point on screen, in whichever region's picture it falls */
+function smPick(sx, sy) { for (const r of [1, 2, 0]) { const ll = smUn(smCams[r], sx, sy), si = ll ? smHit(ll[0], ll[1]) : -1; if (si >= 0 && SM_RG[si] === r) return si; } return -1; }
 /* the net-arrival dots, one per person (about 2.9 million): each county gets enough for its largest full year, placed on its census tracts in proportion
    to their foreign-born residents (ACS 2020-2024, STS.tt/tc) and scattered within each tract's footprint; a county shows its first n in a given year.
    Made once, the first time the slide opens, and drawn straight into a pixel buffer */
 let SMD = null, smOff = null, smOx = null, smID = null, smU32 = null, SM_FAC = [];
+let SM_DK = "", SM_CAMC = null;   /* what the offscreen image of the dots shows (camera, year, layers, state), and the camera it was drawn with */
 const SM_CS = Uint8Array.from(STS.counties.map(cn => cn[2]));
 const smPack = (hx, a) => { const [r, g, b] = hex(hx).map(v => Math.round(v*255)); return ((Math.round(a*255) << 24) | (b << 16) | (g << 8) | r) >>> 0; };
 const SM_COL = Uint32Array.from(TFAM[0].map(h => smPack(h, .95))), SM_DIM = Uint32Array.from(TFAM[0].map(h => smPack(h, .18)));
@@ -147,11 +154,11 @@ const SM_DEF = {...SM_ON}, SM_KEEP = ["det", "bp"], SM_OFF = ["nim", "gc", "h1b"
 function smSetLayer(k, on) { SM_ON[k] = on; legendPaint(); }
 let smOffT = 0, smLineA = 1, smLastSel = -1;
 const SM_YPS = 2, SM_FLY = 1.1;   /* two years a second once the camera has arrived (2001-2025 in 12 s); 1.1 s flights */
-let smSel = -1, smHov = -1, smYear = 2025, smFrom = null, smTo = null, smU = 1, smCam = null, smMouse = null, smShown = "", smExit = 0, smHand = 0, smHandA = 0, smOverlay = false;
-function smReset() { smSel = -1; smHov = -1; smYear = SY[0]; smPlay = true; smExit = 0; smOffT = .4; smLineA = 1; for (const k in SM_DEF) smSetLayer(k, SM_DEF[k]);   /* the slide opens in 2001 and plays forward, with the default layers */ smCam = usCam(); smFrom = smTo = smCam; smU = 1; smp.style.opacity = 0; smt.style.opacity = 0; smShown = ""; }
-function smFly(to) { smFrom = smCam; smTo = to; smU = 0; }
+let smSel = -1, smHov = -1, smYear = 2025, smFrom = null, smTo = null, smU = 1, smCam = null, smCams = null, smMouse = null, smShown = "", smExit = 0, smHand = 0, smHandA = 0, smOverlay = false;
+function smReset() { smSel = -1; smHov = -1; smYear = SY[0]; smPlay = true; smExit = 0; smOffT = .4; smLineA = 1; for (const k in SM_DEF) smSetLayer(k, SM_DEF[k]);   /* the slide opens in 2001 and plays forward, with the default layers */ smCams = usViews(); smCam = smCams[0]; smFrom = smTo = smCams; smU = 1; smp.style.opacity = 0; smt.style.opacity = 0; smShown = ""; }
+function smFly(to) { smFrom = smCams; smTo = Array.isArray(to) ? to : [to, US_OFF, US_OFF]; smU = 0; }   /* each region flies on its own camera; Alaska and Hawaii stay off screen */
 function smSelect(si) { if (si === smSel) return; smSel = si; smYear = SY[0]; smPlay = true; smShown = ""; smFly(smCamFor(si)); smp.style.opacity = 1; }
-function smBack() { if (smSel < 0) return; smLastSel = smSel; smSel = -1; smFly(usCam()); smp.style.opacity = 0; }
+function smBack() { if (smSel < 0) return; smLastSel = smSel; smSel = -1; smFly(usViews()); smp.style.opacity = 0; }
 const smFmt = n => { const a = Math.abs(n), s = n < 0 ? "−" : ""; return s + (a >= 1e6 ? (a/1e6).toFixed(2) + "M" : a >= 1e4 ? Math.round(a/1e3) + "k" : a >= 1e3 ? (a/1e3).toFixed(1) + "k" : String(Math.round(a))); };
 function smDet(si, Y) { const yi = window.DET.years.indexOf(Y); if (yi < 0) return null; let t = 0; window.DET.f.forEach((f, k) => { if (STS.detState[k] === si) t += f[2][yi]; }); return Math.round(t); }
 function smPanel() { const s = STS.states[smSel], Y = Math.floor(smYear + 1e-6), key = smSel + ":" + Y; if (key === smShown) return; smShown = key;
@@ -168,7 +175,8 @@ function smPanel() { const s = STS.states[smSel], Y = Math.floor(smYear + 1e-6),
    as it was and only zooms out while the removals extend from it; the film draws nothing of the US underneath (NO_DET) */
 function smTick(dt, overlay) { const w = Math.round(W*DPR), h = Math.round(H*DPR); if (smc.width !== w || smc.height !== h) { smc.width = w; smc.height = h; } if (!smCam) smReset();
   if (!overlay) {
-    if (smU < 1) { smU = Math.min(1, smU + dt/SM_FLY); smCam = camMix(smFrom, smTo, ease(smU)); } else if (smSel < 0) smCam = usCam();
+    if (smU < 1) { smU = Math.min(1, smU + dt/SM_FLY); smCams = smFrom.map((f, i) => camMix(f, smTo[i], ease(smU))); smCam = smCams[0]; }
+    else if (smSel < 0) { smCams = usViews(); smCam = smCams[0]; } else smCams = [smCam, US_OFF, US_OFF];
     /* leaving: zoom out, run to 2025, switch off the other layers one by one (ICE detention and the border removals stay), then on to the globe */
     if (smExit) { if (smSel >= 0) smBack(); if (smU >= 1 && smSel < 0) { smPlay = false;
       if (smYear < 2025) smYear = Math.min(2025, smYear + dt*8);
@@ -177,8 +185,12 @@ function smTick(dt, overlay) { const w = Math.round(W*DPR), h = Math.round(H*DPR
     if (smPlay && smU >= 1) { smYear = Math.min(2025, smYear + dt*SM_YPS); if (smYear >= 2025) smPlay = false; }
     if (!smDrag) smScrub.value = smYear; smYr.textContent = Math.floor(smYear + 1e-6); }
   const c = overlay ? CAM : smCam, M = rot(c), x = smx; x.setTransform(DPR, 0, 0, DPR, 0, 0);
+  /* the regions' cameras; zooming out to the globe, the insets keep their place beside the lower 48, scaled and moved with it */
+  let cs = smCams; if (overlay) { const u = smCams[0], k = c.R/u.R, ref = v3(-96.5, 38.2), q0 = smPt(rot(u), u, ref), q1 = smPt(M, c, ref), tx = q1[0] - q0[0]*k, ty = q1[1] - q0[1]*k;
+    cs = [c, ...smCams.slice(1).map(q => ({...q, R: q.R*k, cx: q.cx*k + tx, cy: q.cy*k + ty}))]; }
+  const Ms = cs.map(q => rot(q));
   if (overlay) x.clearRect(0, 0, W, H); else { x.fillStyle = "#05080d"; x.fillRect(0, 0, W, H); }
-  const ring = (si) => { x.beginPath(); for (const r of SM_V[si]) { let pen = false; for (const p of r) { const q = smPt(M, c, p); if (q[2] < 0) { pen = false; continue; } pen ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); pen = true; } } };
+  const ring = (si) => { const g = SM_RG[si], m = Ms[g], cc = cs[g]; x.beginPath(); for (const r of SM_V[si]) { let pen = false; for (const p of r) { const q = smPt(m, cc, p); if (q[2] < 0) { pen = false; continue; } pen ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); pen = true; } } };
   /* outlines */
   /* the borders fade while the layers switch off on the way out of the map, and are gone by the time the removals spread; skipped with a second
      press, whatever is left fades in the first moment of the globe slide */
@@ -187,39 +199,53 @@ function smTick(dt, overlay) { const w = Math.round(W*DPR), h = Math.round(H*DPR
   x.lineJoin = "round"; x.lineWidth = .6; x.strokeStyle = `rgba(236,230,216,${(smSel >= 0 ? .07 : .16)*lineA})`; if (lineA > .005) for (let i = 0; i < STS.states.length; i++) if (i !== smSel) { ring(i); x.stroke(); }
   /* county dots: the chosen state replays its years, the others stay at 2025, dimmed while a state is chosen */
   const sel = smSel >= 0, r0 = .5, off = (q) => q[2] < 0 || q[0] < -2 || q[0] > W + 2 || q[1] < -2 || q[1] > H + 2;
-  if (SM_ON.nim || SM_ON.bp || SM_ON.gc || SM_ON.h1b || SM_ON.stu) {
-    if (!smOff || smOff.width !== W || smOff.height !== H) { smOff = document.createElement("canvas"); smOff.width = W; smOff.height = H; smOx = smOff.getContext("2d"); smID = smOx.createImageData(W, H); smU32 = new Uint32Array(smID.data.buffer); }
-    smU32.fill(0); const a0 = M[0]*c.R, a1 = M[1]*c.R, a2 = M[2]*c.R, b0 = M[3]*c.R, b1 = M[4]*c.R, b2 = M[5]*c.R;
-    /* one pass per layer into the pixel buffer: 1 px squares, the chosen state's at full strength, the others dimmed */
-    const pass = (S, lim, grp, col, dim) => { const P = S.p, CC = S.c, J = S.j, K = S.k;
-      for (let i = 0, n = S.n; i < n; i++) { const ci = CC[i]; if (J[i] >= lim[ci]) continue; const px = P[3*i], py = P[3*i + 1], pz = P[3*i + 2]; if (M[6]*px + M[7]*py + M[8]*pz < 0) continue;
-        const X = Math.floor(c.cx + a0*px + a1*py + a2*pz), Y = Math.floor(c.cy - b0*px - b1*py - b2*pz); if (X < 0 || Y < 0 || X >= W || Y >= H) continue;
-        smU32[Y*W + X] = sel && grp(ci) !== smSel ? dim[K[i]] : col[K[i]]; } };
-    if (SM_ON.nim) { if (!SMD) SMD = smMake(); const cv = new Float32Array(STS.counties.length); STS.counties.forEach((cn, ci) => { cv[ci] = smVal(cn[3], smYear); }); pass(SMD, cv, ci => SM_CS[ci], SM_COL, SM_DIM); }
-    /* green cards and students have one year each (2024), so they appear when the timeline reaches it; H-1B runs 2009-2025 */
-    if (SM_ON.gc && smYear >= 2024) { if (!SMG) SMG = smTracts(STS.gc24, 2024); pass(SMG, STS.gc24, ci => SM_CS[ci], SM_GCC, SM_GCD); }
-    if (SM_ON.stu && smYear >= 2024) { if (!SMS) SMS = smPts(STS.stu, s => s[3], .8, 99); pass(SMS, STS.stu.map(s => s[3]), i => STS.stu[i][2], SM_SC, SM_SD); }
-    if (SM_ON.h1b && smYear >= 2009) { if (!SMH) SMH = smPts(SM_H.z, (z, i) => SM_HMAX[i], 1.2, 77); pass(SMH, SM_HV.map(v => smSeries(v, SM_HY, smYear)), i => SM_H.z[i][2], SM_HC, SM_HD); }
-    if (SM_ON.bp && smYear >= 2014) { if (!SMB) SMB = smMakeBP(); pass(SMB, SM_BP.map(b => smBPAt(b, smYear)), bi => SM_BP[bi].si, SM_BPC, SM_BPD); }
-    smOx.putImageData(smID, 0, 0); x.imageSmoothingEnabled = false; x.drawImage(smOff, 0, 0, W, H); }
+  /* every dot layer and ICE detention go into one offscreen image, redrawn only when what it shows changes (the camera, the year, the layers,
+     the chosen state); otherwise a frame just copies it. Each layer also keeps its dots' pixel positions for the current camera, so while the
+     timeline plays only the year test runs. Zooming out to the globe (overlay), the last image is scaled and moved with the camera as it fades */
+  const anyDots = SM_ON.nim || SM_ON.bp || SM_ON.gc || SM_ON.h1b || SM_ON.stu || (SM_ON.det && smYear >= 2019);
+  if (overlay) {
+    if (anyDots && smOff && SM_CAMC) { const u = SM_CAMC, k = c.R/u.R, ref = v3(-96.5, 38.2), q0 = smPt(rot(u), u, ref), q1 = smPt(M, c, ref);
+      x.save(); x.translate(q1[0] - q0[0]*k, q1[1] - q0[1]*k); x.scale(k, k); x.imageSmoothingEnabled = true; x.drawImage(smOff, 0, 0, W, H); x.restore(); } }
+  else if (anyDots) {
+    if (!smOff || smOff.width !== W || smOff.height !== H) { smOff = document.createElement("canvas"); smOff.width = W; smOff.height = H; smOx = smOff.getContext("2d"); smID = smOx.createImageData(W, H); smU32 = new Uint32Array(smID.data.buffer); SM_DK = ""; }
+    const camKey = cs.map(q => [q.lon, q.lat, q.R, q.cx, q.cy].join(",")).join(";") + "," + W + "," + H, dk = camKey + "|" + smYear.toFixed(3) + "|" + smSel + "|" + ["nim", "gc", "h1b", "stu", "det", "bp"].map(k => +!!SM_ON[k]).join("");
+    if (dk !== SM_DK) { SM_DK = dk; SM_CAMC = {...c};
+      smU32.fill(0); const CO = cs.map((q, g) => { const m = Ms[g]; return [m[0]*q.R, m[1]*q.R, m[2]*q.R, m[3]*q.R, m[4]*q.R, m[5]*q.R, m[6], m[7], m[8], q.cx, q.cy]; });
+      /* one pass per layer into the pixel buffer: 1 px squares, the chosen state's at full strength, the others dimmed */
+      const pass = (S, lim, grp, col, dim) => { const n = S.n, CC = S.c, J = S.j, K = S.k;
+        if (S.pk !== camKey) { const P = S.p, RG = S.rg || (S.rg = smRegs(P, n)), pix = S.pix || (S.pix = new Int32Array(n));   /* where each dot lands for its region's camera, -1 if not on screen */
+          for (let i = 0; i < n; i++) { const px = P[3*i], py = P[3*i + 1], pz = P[3*i + 2], o = CO[RG[i]]; if (o[6]*px + o[7]*py + o[8]*pz < 0) { pix[i] = -1; continue; }
+            const X = Math.floor(o[9] + o[0]*px + o[1]*py + o[2]*pz), Y = Math.floor(o[10] - o[3]*px - o[4]*py - o[5]*pz); pix[i] = X < 0 || Y < 0 || X >= W || Y >= H ? -1 : Y*W + X; }
+          S.pk = camKey; }
+        const pix = S.pix; for (let i = 0; i < n; i++) { const p = pix[i]; if (p < 0) continue; const ci = CC[i]; if (J[i] >= lim[ci]) continue; smU32[p] = sel && grp(ci) !== smSel ? dim[K[i]] : col[K[i]]; } };
+      if (SM_ON.nim) { if (!SMD) SMD = smMake(); const cv = new Float32Array(STS.counties.length); STS.counties.forEach((cn, ci) => { cv[ci] = smVal(cn[3], smYear); }); pass(SMD, cv, ci => SM_CS[ci], SM_COL, SM_DIM); }
+      /* green cards and students have one year each (2024), so they appear when the timeline reaches it; H-1B runs 2009-2025 */
+      if (SM_ON.gc && smYear >= 2024) { if (!SMG) SMG = smTracts(STS.gc24, 2024); pass(SMG, STS.gc24, ci => SM_CS[ci], SM_GCC, SM_GCD); }
+      if (SM_ON.stu && smYear >= 2024) { if (!SMS) SMS = smPts(STS.stu, s => s[3], .8, 99); pass(SMS, STS.stu.map(s => s[3]), i => STS.stu[i][2], SM_SC, SM_SD); }
+      if (SM_ON.h1b && smYear >= 2009) { if (!SMH) SMH = smPts(SM_H.z, (z, i) => SM_HMAX[i], 1.2, 77); pass(SMH, SM_HV.map(v => smSeries(v, SM_HY, smYear)), i => SM_H.z[i][2], SM_HC, SM_HD); }
+      if (SM_ON.bp && smYear >= 2014) { if (!SMB) SMB = smMakeBP(); pass(SMB, SM_BP.map(b => smBPAt(b, smYear)), bi => SM_BP[bi].si, SM_BPC, SM_BPD); }
+      smOx.putImageData(smID, 0, 0);
+      /* ICE detention, from 2019: a facility's first n dots, n = people held on an average day that year, packed in a tight disc (a sunflower spiral,
+         one dot per person) on the facility's ZIP point, so the disc stays on the facility at any zoom; drawn into the same image, over the dots */
+      SM_FAC = [];
+      if (SM_ON.det && smYear >= 2019) { const o = smOx, F = window.DET.f, yf = Math.min(smYear, 2025) - DETY[0], i0 = Math.floor(clamp(yf, 0, DETY.length - 1)), i1 = Math.min(DETY.length - 1, i0 + 1), u = clamp(yf - i0), rd = Array.from({length: 16}, () => new Path2D());
+        const fp = F.map(f => { const g = smRegLL(f[0], f[1]); return smPt(Ms[g], cs[g], v3(f[0], f[1])); }), ds = .8*Math.min(1, c.R/usCam().R);
+        F.forEach((f, k) => { const a = f[2], n = Math.round(a[i0] + (a[i1] - a[i0])*u); if (n > 0 && STS.detState[k] >= 0 && fp[k][2] > 0) SM_FAC.push({k, x: fp[k][0], y: fp[k][1], r: ds*Math.sqrt(n) + 3, n}); });
+        for (const d of DETP) { if (STS.detState[d.f] < 0) continue; const mine = sel && STS.detState[d.f] === smSel, a = F[d.f][2];
+          if (d.j >= a[i0] + (a[i1] - a[i0])*u) continue; const p = fp[d.f]; if (p[2] < 0) continue; const an = d.j*2.39996, rr = ds*Math.sqrt(d.j + .5), q = [p[0] + rr*Math.cos(an), p[1] + rr*Math.sin(an), 1];
+          if (off(q)) continue; rd[d.k + (sel && !mine ? 8 : 0)].rect(q[0] - r0, q[1] - r0, 2*r0, 2*r0); }
+        for (let k = 0; k < 16; k++) { o.globalAlpha = k < 8 ? .95 : .18; o.fillStyle = REDS[k % 8]; o.fill(rd[k]); } o.globalAlpha = 1; } }
+    x.imageSmoothingEnabled = false; x.drawImage(smOff, 0, 0, W, H); }
+  else SM_FAC = [];
   /* the chosen state's county borders; leaving the map, the last chosen state's keep fading with the other lines while the map zooms out */
   const cty = sel ? smSel : smExit && !overlay ? smLastSel : -1, ctyA = (sel && !smExit ? 1 : smLineA)*.2;
-  if (cty >= 0 && ctyA > .001) { x.lineWidth = .5; x.strokeStyle = `rgba(236,230,216,${ctyA})`; x.beginPath();
-    for (const r of smCR(cty)) { let pen = false; for (const p of r) { const q = smPt(M, c, p); if (q[2] < 0) { pen = false; continue; } pen ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); pen = true; } }
+  if (cty >= 0 && ctyA > .001) { const g = SM_RG[cty]; x.lineWidth = .5; x.strokeStyle = `rgba(236,230,216,${ctyA})`; x.beginPath();
+    for (const r of smCR(cty)) { let pen = false; for (const p of r) { const q = smPt(Ms[g], cs[g], p); if (q[2] < 0) { pen = false; continue; } pen ? x.lineTo(q[0], q[1]) : x.moveTo(q[0], q[1]); pen = true; } }
     x.stroke(); }
-  /* ICE detention, from 2019: a facility's first n dots, n = people held on an average day that year, packed in a tight disc (a sunflower spiral,
-     one dot per person) on the facility's ZIP point, so the disc stays on the facility at any zoom */
-  if (SM_ON.det && smYear >= 2019) { const F = window.DET.f, yf = Math.min(smYear, 2025) - DETY[0], i0 = Math.floor(clamp(yf, 0, DETY.length - 1)), i1 = Math.min(DETY.length - 1, i0 + 1), u = clamp(yf - i0), rd = Array.from({length: 16}, () => new Path2D());
-    const fp = F.map(f => smPt(M, c, v3(f[0], f[1]))), ds = .8*Math.min(1, c.R/usCam().R); SM_FAC = [];   /* discs shrink when the view is wider than the US map's (the zoom-out to the globe) */
-    F.forEach((f, k) => { const a = f[2], n = Math.round(a[i0] + (a[i1] - a[i0])*u); if (n > 0 && STS.detState[k] >= 0 && fp[k][2] > 0) SM_FAC.push({k, x: fp[k][0], y: fp[k][1], r: ds*Math.sqrt(n) + 3, n}); });
-    for (const d of DETP) { if (STS.detState[d.f] < 0) continue; const mine = sel && STS.detState[d.f] === smSel, a = F[d.f][2];
-      if (d.j >= a[i0] + (a[i1] - a[i0])*u) continue; const p = fp[d.f]; if (p[2] < 0) continue; const an = d.j*2.39996, rr = ds*Math.sqrt(d.j + .5), q = [p[0] + rr*Math.cos(an), p[1] + rr*Math.sin(an), 1];
-      if (off(q)) continue; rd[d.k + (sel && !mine ? 8 : 0)].rect(q[0] - r0, q[1] - r0, 2*r0, 2*r0); }
-    for (let k = 0; k < 16; k++) { x.globalAlpha = k < 8 ? .95 : .18; x.fillStyle = REDS[k % 8]; x.fill(rd[k]); } x.globalAlpha = 1; }
   /* glow: the chosen state, and the one under the mouse */
   for (const [si, a] of (smExit && !overlay ? [[smSel >= 0 ? smSel : smLastSel, smLineA]] : [[smSel, 1], [smHov !== smSel ? smHov : -1, .8]])) { if (si < 0 || a < .005) continue;   /* the glow fades with the lines when leaving */ ring(si); x.save(); x.shadowColor = `rgba(220,240,255,${a})`; x.shadowBlur = 14; x.strokeStyle = `rgba(255,255,255,${.85*a})`; x.lineWidth = 1.4; x.stroke(); x.stroke(); x.restore(); }
   if (sel && !overlay) smPanel(); }
-smc.addEventListener("pointermove", e => { if (!smCam || ZOOM > .02) return; const ll = smUn(smCam, e.offsetX, e.offsetY); smHov = ll ? smHit(ll[0], ll[1]) : -1; smc.classList.toggle("on", smHov >= 0);
+smc.addEventListener("pointermove", e => { if (!smCam || ZOOM > .02) return; smHov = smPick(e.offsetX, e.offsetY); smc.classList.toggle("on", smHov >= 0); smc.classList.toggle("pan", smSel < 0 && USK > 1 + 1e-3);
   /* an ICE facility under the mouse: its name, as ICE publishes it, and the people held there on an average day in the year shown */
   let fac = null, best = 1e9; if (SM_ON.det && smYear >= 2019) for (const f of SM_FAC) { const d = Math.hypot(e.offsetX - f.x, e.offsetY - f.y); if (d < f.r && d < best) { best = d; fac = f; } }
   const tip = (html) => { smt.innerHTML = html; smt.style.left = (e.offsetX + 14) + "px"; smt.style.top = (e.offsetY - 8) + "px"; smt.style.opacity = 1; };
@@ -229,11 +255,12 @@ smc.addEventListener("pointermove", e => { if (!smCam || ZOOM > .02) return; con
   else if (sec) tip(`${sec.n.toUpperCase()} · Border Patrol sector and port of entry<br>~${(Math.round(smBPAt(sec, Math.floor(smYear + 1e-6))/100)*100).toLocaleString("en-US")} BPS removals, ${Math.min(Math.floor(smYear + 1e-6), 2024)} (estimated)`);
   else if (smHov >= 0 && smHov !== smSel) tip(STS.states[smHov].n); else smt.style.opacity = 0; });
 smc.addEventListener("pointerleave", () => { smHov = -1; smt.style.opacity = 0; });
-/* in a state: drag to pan, the wheel to zoom (out past the state's own framing returns to the full map), a click off the state returns too */
+/* on the US map zoomed in, drag to pan. In a state: drag to pan, the wheel to zoom (out past the state's own framing returns to the full map), a click off the state returns too */
 let smDragAt = null, smDragged = false;
-smc.addEventListener("pointerdown", e => { if (smSel < 0 || smU < 1) return; smDragAt = [e.offsetX, e.offsetY]; smDragged = false; smc.setPointerCapture(e.pointerId); });
+smc.addEventListener("pointerdown", e => { if (smU < 1 || (smSel < 0 && USK <= 1 + 1e-3)) return; smDragAt = [e.offsetX, e.offsetY]; smDragged = false; smc.setPointerCapture(e.pointerId); });
 smc.addEventListener("pointermove", e => { if (!smDragAt || !(e.buttons & 1)) return; const dx = e.offsetX - smDragAt[0], dy = e.offsetY - smDragAt[1];
   if (!smDragged && Math.hypot(dx, dy) < 4) return; smDragged = true; smDragAt = [e.offsetX, e.offsetY]; smt.style.opacity = 0;
+  if (smSel < 0) { usPan(dx, dy); return; }
   smCam = {...smCam, lon: smCam.lon - dx/smCam.R/D2R/Math.max(.2, Math.cos(smCam.lat*D2R)), lat: clamp(smCam.lat + dy/smCam.R/D2R, -80, 80)}; });
 smc.addEventListener("pointerup", () => { smDragAt = null; });
 smc.addEventListener("wheel", e => { if (smSel < 0 || smU < 1) return; e.preventDefault(); const base = smCamFor(smSel).R, k = Math.exp(-e.deltaY*.0015), R = smCam.R*k;

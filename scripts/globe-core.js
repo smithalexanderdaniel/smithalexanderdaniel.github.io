@@ -61,10 +61,10 @@ void main(){ float u = clamp((uTr - aD)/.55, 0., 1.); u = u < .5 ? 4.*u*u*u : 1.
 const FS_DOT = `precision mediump float; uniform float uAlpha, uGlow, uDimA; varying vec3 vCol; varying float vLit, vVis;
 void main(){ if (vVis < .5) discard; float a = uAlpha; vec3 c = vCol; if (vLit < .5) { c = vec3(.141, .251, .302); a = uGlow > .5 ? 0. : uDimA; }
   if (uGlow > .5) { float d = length(gl_PointCoord - .5); a *= 1. - smoothstep(.1, .5, d); } gl_FragColor = vec4(c, a); }`;
-const VS_LN = `attribute vec3 aP, aCol; attribute float aS, aD;
-uniform vec3 uR0, uR1, uR2; uniform vec2 uC, uRes; uniform float uRad, uTr; varying vec3 vCol; varying float vA;
+const VS_LN = `attribute vec3 aP, aCol; attribute float aS, aD, aCi;
+uniform vec3 uR0, uR1, uR2; uniform vec2 uC, uRes; uniform float uRad, uTr, uLitOn, uDimL, uHiL; uniform sampler2D uLit; varying vec3 vCol; varying float vA;
 void main(){ vec3 q = vec3(dot(uR0, aP), dot(uR1, aP), dot(uR2, aP)); float u = clamp((uTr - aD)/.55, 0., 1.); u = u < .5 ? 4.*u*u*u : 1. - pow(-2.*u + 2., 3.)/2.;
-  float vis = (q.z > 0. || length(q.xy) > 1.) && aS <= u + .0001 ? 1. : 0.; vec2 sc = uC + vec2(q.x, -q.y)*uRad; gl_Position = vec4(sc.x/uRes.x*2. - 1., 1. - sc.y/uRes.y*2., 0., 1.); vCol = aCol; vA = vis*(.35 + .65*aS); }`;
+  float vis = (q.z > 0. || length(q.xy) > 1.) && aS <= u + .0001 ? 1. : 0.; vec2 sc = uC + vec2(q.x, -q.y)*uRad; gl_Position = vec4(sc.x/uRes.x*2. - 1., 1. - sc.y/uRes.y*2., 0., 1.); vCol = aCol; float lc = texture2D(uLit, vec2((aCi + .5)/256., .25)).r; vA = vis*(.35 + .65*aS)*(uLitOn > .5 ? (lc < .75 ? uDimL : uHiL) : 1.); }`;   /* the country in focus: its arcs brighter (uHiL), the rest dim (uDimL) */
 const FS_LN = `precision mediump float; uniform float uAlpha; varying vec3 vCol; varying float vA; void main(){ if (vA < .01) discard; gl_FragColor = vec4(vCol, uAlpha*vA); }`;
 const VS_BG = `attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0., 1.); }`;
 const FS_BG = `precision mediump float; uniform vec2 uC, uRes; uniform float uRad, uDPR, uA; void main(){ vec2 p = vec2(gl_FragCoord.x, uRes.y*uDPR - gl_FragCoord.y)/uDPR; float d = length(p - uC)/uRad;
@@ -79,7 +79,7 @@ const LIT = new Uint8Array(256*2*4).fill(255), LITT = gl.createTexture(); gl.bin
 const pushLit = () => { gl.bindTexture(gl.TEXTURE_2D, LITT); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, LIT); }; pushLit();
 // dot buffers: to(3) from(3) col(3) ci t d = 12 floats
 function dotBuf(arr) { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW); return {b, n: arr.length/12}; }
-function lnBuf(arr) { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW); return {b, n: arr.length/8}; }
+function lnBuf(arr) { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW); return {b, n: arr.length/9}; }
 const free = o => o && gl.deleteBuffer(o.b);
 function pushDot(out, to, from, col, ci, t, d) { out.push(to[0], to[1], to[2], from[0], from[1], from[2], col[0], col[1], col[2], ci, t, d); }
 // land speckle, once
@@ -99,7 +99,7 @@ function remsFor(yi) { const L = D.rem.years[YEARS[yi]]; if (!L) return null; if
   for (const [st, n, v] of L) { const [c, ci] = remCountry(n), o = D.rem.st[st]; if (!c || !o) continue; let m = Math.round(v); while (m-- > 0) pushDot(a, v3(...cloudPt(c)), v3(o[0] + gauss()*1.2, o[1] + gauss()*.9), hex(REDS[Math.floor(rnd()*REDS.length)]), ci, 9, rnd()*.5); }
   return REMD[yi] = dotBuf(new Float32Array(a)); }
 // hairline bundles: arrivals climb high, removals stay low
-function strand(out, a, b, h, col, d, N = 48) { for (let k = 0; k < N; k++) for (const j of [k, k + 1]) { const u = j/N, p = slerp(a, b, u), r = 1 + h*Math.sin(PI*u), m = Math.hypot(...p); out.push(p[0]/m*r, p[1]/m*r, p[2]/m*r, u, d, col[0], col[1], col[2]); } }
+function strand(out, a, b, h, col, d, N = 48, ci = 255) { for (let k = 0; k < N; k++) for (const j of [k, k + 1]) { const u = j/N, p = slerp(a, b, u), r = 1 + h*Math.sin(PI*u), m = Math.hypot(...p); out.push(p[0]/m*r, p[1]/m*r, p[2]/m*r, u, d, col[0], col[1], col[2], ci); } }
 function arcsFor(yi) { if (ARR[yi]) return ARR[yi]; const a = [], y = YEARS[yi], tot = c => c.v[yi].reduce((s, v) => s + v, 0); sd = 900 + yi;
   const top = C.filter((c, i) => i !== US && tot(c) > 0).sort((p, q) => tot(q) - tot(p)).slice(0, 46), mx = tot(top[0]), col = [.84, .89, .97];
   for (const c of top) { const ps = portsFor(y), A0 = v3(c.lon, c.lat); let best = ps[0], bv = -1; for (const p of ps) { const v = p[2]/Math.pow(.35 + angle(A0, v3(p[0], p[1])), 3); if (v > bv) { bv = v; best = p; } }
@@ -117,16 +117,18 @@ function censusFor(yi) { const ni = D.years.indexOf(String(YEARS[yi])); if (ni <
   for (const [lon, lat, v] of D.counties) { let m = Math.floor(Math.max(0, v[ni])/100) + (rnd() < (Math.max(0, v[ni])/100) % 1 ? 1 : 0); while (m-- > 0) { const p = v3(lon + gauss()*.12, lat + gauss()*.09), col = hex(BLUES[Math.floor(rnd()*BLUES.length)]); pushDot(a, p, p, col, 254, 8, 0); } }
   return CENS[yi] = dotBuf(new Float32Array(a)); }
 // draw
-let W, H, DPR;
+let W, H, DPR, GDPR = 1;   /* GDPR: the globe's own pixel ratio, set to the screen's (up to 2x) on resize */
 function bindDots(o) { gl.bindBuffer(gl.ARRAY_BUFFER, o.b); const A = PD.A, st = 48; const at = (n, sz, off) => { if (A[n] === undefined || A[n] < 0) return; gl.enableVertexAttribArray(A[n]); gl.vertexAttribPointer(A[n], sz, gl.FLOAT, false, st, off*4); };
   at("aTo", 3, 0); at("aFrom", 3, 3); at("aCol", 3, 6); at("aCi", 1, 9); at("aT", 1, 10); at("aD", 1, 11); }
 function camU(P) { gl.uniform3f(P.U.uR0, ROT[0], ROT[1], ROT[2]); gl.uniform3f(P.U.uR1, ROT[3], ROT[4], ROT[5]); gl.uniform3f(P.U.uR2, ROT[6], ROT[7], ROT[8]); gl.uniform2f(P.U.uC, CAM.cx, CAM.cy); gl.uniform2f(P.U.uRes, W, H); gl.uniform1f(P.U.uRad, CAM.R); }
-function drawDots(o, {tr = 2, size = 1.15, alpha = .82, glow = true, lit = 0, dimA = .4}) { if (!o || !o.n) return; gl.useProgram(PD.p); camU(PD); gl.uniform1f(PD.U.uDPR, DPR); gl.uniform1f(PD.U.uTr, tr); gl.uniform1f(PD.U.uLitOn, lit); gl.uniform1f(PD.U.uDimA, dimA);
+function drawDots(o, {tr = 2, size = 1.15, alpha = .82, glow = true, lit = 0, dimA = .4}) { if (!o || !o.n) return; gl.useProgram(PD.p); camU(PD); gl.uniform1f(PD.U.uDPR, GDPR); gl.uniform1f(PD.U.uTr, tr); gl.uniform1f(PD.U.uLitOn, lit); gl.uniform1f(PD.U.uDimA, dimA);
   gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, LITT); gl.uniform1i(PD.U.uLit, 0); bindDots(o);
   if (glow) { gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.uniform1f(PD.U.uGlow, 1); gl.uniform1f(PD.U.uSize, 7); gl.uniform1f(PD.U.uAlpha, alpha*.05); gl.drawArrays(gl.POINTS, 0, o.n); }
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.uniform1f(PD.U.uGlow, 0); gl.uniform1f(PD.U.uSize, size); gl.uniform1f(PD.U.uAlpha, alpha); gl.drawArrays(gl.POINTS, 0, o.n); }
-function drawLines(o, {tr = 2, alpha = .2}) { if (!o || !o.n || alpha < .005) return; gl.useProgram(PL.p); camU(PL); gl.uniform1f(PL.U.uTr, tr); gl.uniform1f(PL.U.uAlpha, alpha); gl.bindBuffer(gl.ARRAY_BUFFER, o.b); const A = PL.A, st = 32;
+function drawLines(o, {tr = 2, alpha = .2, lit = 0, dim = .15, hi = 1}) { if (!o || !o.n || alpha < .005) return; gl.useProgram(PL.p); camU(PL); gl.uniform1f(PL.U.uTr, tr); gl.uniform1f(PL.U.uAlpha, alpha);
+  gl.uniform1f(PL.U.uLitOn, lit); gl.uniform1f(PL.U.uDimL, dim); gl.uniform1f(PL.U.uHiL, hi); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, LITT); gl.uniform1i(PL.U.uLit, 0); gl.bindBuffer(gl.ARRAY_BUFFER, o.b); const A = PL.A, st = 36;
   gl.enableVertexAttribArray(A.aP); gl.vertexAttribPointer(A.aP, 3, gl.FLOAT, false, st, 0); gl.enableVertexAttribArray(A.aS); gl.vertexAttribPointer(A.aS, 1, gl.FLOAT, false, st, 12); gl.enableVertexAttribArray(A.aD); gl.vertexAttribPointer(A.aD, 1, gl.FLOAT, false, st, 16); gl.enableVertexAttribArray(A.aCol); gl.vertexAttribPointer(A.aCol, 3, gl.FLOAT, false, st, 20);
+  gl.enableVertexAttribArray(A.aCi); gl.vertexAttribPointer(A.aCi, 1, gl.FLOAT, false, st, 32);
   gl.blendFunc(gl.SRC_ALPHA, gl.ONE); gl.drawArrays(gl.LINES, 0, o.n); }
-function drawBg(a) { gl.useProgram(PB.p); gl.uniform2f(PB.U.uC, CAM.cx, CAM.cy); gl.uniform2f(PB.U.uRes, W, H); gl.uniform1f(PB.U.uRad, CAM.R); gl.uniform1f(PB.U.uDPR, DPR); gl.uniform1f(PB.U.uA, a);
+function drawBg(a) { gl.useProgram(PB.p); gl.uniform2f(PB.U.uC, CAM.cx, CAM.cy); gl.uniform2f(PB.U.uRes, W, H); gl.uniform1f(PB.U.uRad, CAM.R); gl.uniform1f(PB.U.uDPR, GDPR); gl.uniform1f(PB.U.uA, a);
   gl.bindBuffer(gl.ARRAY_BUFFER, QUAD); gl.enableVertexAttribArray(PB.A.aP); gl.vertexAttribPointer(PB.A.aP, 2, gl.FLOAT, false, 0, 0); gl.disable(gl.BLEND); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.enable(gl.BLEND); }

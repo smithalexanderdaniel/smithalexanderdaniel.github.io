@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Methods · Immigration &amp; Deportation in America</title>
-<link rel="stylesheet" href="css/site.css?v=20261009q"></head><body>
+<link rel="stylesheet" href="css/site.css?v=20261009ap"></head><body>
 <nav class="nav" aria-label="Site"><a class="brand" href="index.html">Immigration &amp; Deportation in America</a>
 <ul><li><a class="link" href="index.html">About</a></li><li><a class="link" href="team.html">Team</a></li><li><a class="link" href="map.html">Map</a></li><li><a class="link" href="graphs.html">Graphs</a></li><li><a class="link" href="data.html">Data</a></li><li><a class="link" href="methods.html" aria-current="page">Methods</a></li></ul></nav>
 <main class="page">
@@ -9,28 +9,28 @@
 
 <h2>Tech stack</h2>
 <ul>
-<li><b>Sources.</b> Raw government files, downloaded and archived unchanged: Census Bureau population estimates, State Department visa reports, DHS yearbook and enforcement tables, ICE detention statistics, the Deportation Data Project, the USCIS H-1B hub and NCES enrollment data. A manifest records each file’s origin URL and checksum.</li>
-<li><b>Processing.</b> Python scripts (pandas, openpyxl, pyshp) reshape each source into JSON and log what they did: which rows they read, which file each year came from. Nothing is rounded or imputed; estimates are labelled as estimates.</li>
-<li><b>Geography.</b> Census cartographic boundaries and Gazetteer points. On the map, each county’s dots sit on its census tracts in proportion to foreign-born residents (American Community Survey 2020–2024).</li>
-<li><b>Rendering.</b> Plain HTML, CSS and JavaScript, with no framework: WebGL for the globes and their millions of dots, Canvas for the US map, SVG for the graphs.</li>
-<li><b>Hosting.</b> A static site. Each page loads its data as JSON files when it opens.</li>
-<li><b>AI.</b> Claude, used as a supervised analyst and programmer under the rules described below.</li>
+<li><b>Sources.</b> Raw files archived &amp; unchanged, Census population estimates, State Department visa reports, DHS tables, ICE detention statistics, the Deportation Data Project, USCIS H-1B hub and NCES enrollment data, Manifest records each file and checksum.</li>
+<li><b>Processing.</b> Python (pandas, openpyxl, pyshp) reshape each source into JSON: rows read, and file dates. Nothing is rounded or imputed, and estimates are labelled.</li>
+<li><b>Geography.</b> Census cartographic boundaries and Gazetteer points. County dots sit on census tracts in proportion to foreign-born residents (American Community Survey 2020–2024).</li>
+<li><b>Rendering.</b> HTML, CSS and JavaScript, WebGL, Canvas, and SVG.</li>
+<li><b>Hosting.</b> GitHub</li>
+<li><b>AI.</b> Claude Code</li>
 </ul>
 
 <h2>Data forensics</h2>
-<h3>Prompt engineering strategy</h3>
-<p>We used AI as a supervised analyst. Prompts were directive and constraint-based. We required AI to work only from raw government files we downloaded. Every derived dataset was saved as JSON recording its source file. When outputs drifted, we corrected with explicit constraints.</p>
+<h3>AI strategy</h3>
+<p>We used Claude Code as a supervised analyst, not for narrative or strategy. We required that it work only from raw source data files. Source files were referenced to create JSONs with source file information and checksums for validation.</p>
 <h3>Auditing AI data manipulation</h3>
-<p>Following our Chain of Custody Audit Card, we archived raw files unaltered with a manifest of their origins and checksums. Every transformation runs through a script that logs what it did: which row it read as the header, which columns it left as text, and which source file each year came from. Nothing is rounded or imputed. We audited outputs by comparing each new version of a graph against the previous one, and by checking that parts add up to their totals: the states to the national figure, the counties to their states, and the visa classes to their categories.</p>
+<p>Following the Chain of Custody Audit Card, we archived raw files unaltered with a manifest of their origins and checksums. Every transformation runs through a script that logs what it did: which row it read as the header, which columns it left as text, and which source file each year came from. Nothing was rounded or imputed, and we audited outputs. We compared each new graph against the previous one, and ensured that parts add up to their totals: states to national figures, counties to states, and visa classes to their categories.</p>
 <h3>Mitigating bias and hallucination</h3>
-<p>Our audit caught one problem directly. AI swapped the Census’s April–June 2020 figure for a full-year number from an older release, and that changed the shape of the graph. We reverted it and now flag partial years instead of altering them. AI also flagged claims the data didn’t support, such as “negative immigration in 2026” and “a 300% rise”.</p>
-<h3>Methodologies behind the visualized metrics</h3>
+<p>Our audit caught one problem directly. AI swapped the Census’s April–June 2020 figure for a full-year number from an older release, and that changed the shape of the graph. We reverted it and began flagging partial years instead of altering them.</p>
+<h3>Methodologies behind the visuals</h3>
 <ul>
 <li>Migration: Census net international migration, years ending 1 July. Data for 2001–2009 come from the 2009 estimates release, 2010–2019 from the 2020 release and 2020–2025 from the 2025 release. 2010 and 2020 cover April–June only. On the US map, one dot = one person.</li>
-<li>Visas: State Department visas issued. On the globes, 2024, one dot = 50 visas; arcs route through likely ports of entry and illustrate, but do not record, journeys. The graphs show yearly totals by category for 2001–2025 and every visa class for FY2018–2025, summed from the monthly reports, which agree with the annual totals to within 2%.</li>
-<li>Green cards: DHS data for the 200 busiest counties plus state totals by country of birth; 99.3% of 2024’s 1.36 million are mapped, one dot per person.</li>
+<li>Visas: State Department visas issued. On the globes, 2024, one dot = 50 visas. Arcs route through likely ports of entry and illustrate, but do not record, journeys. The graphs show yearly totals by category for 2001–2025 and every visa class for FY2018–2025, summed from the monthly reports, which agree with the annual totals to within 2%.</li>
+<li>Green cards: DHS data for the 200 busiest counties plus state totals by country of birth. 99.3% of 2024’s 1.36 million are mapped, one dot per person.</li>
 <li>Detention: ICE average daily detention by facility, plotted at ZIP code centres, one dot per person held.</li>
-<li>Removals: ICE removals are those that began with an ICE arrest, by state of arrest and country, counted by calendar year of departure (2022: October–December only). BPS removals follow a border arrest; their split by Border Patrol sector, and their destination countries on the globe, are estimates.</li>
+<li>Removals: ICE removals are those that began with an ICE arrest, by state of arrest and country, counted by calendar year of departure (2022: October–December only). BPS removals follow a border arrest. Their split by Border Patrol sector, and their destination countries on the globe, are estimates.</li>
 </ul>
 <p><b>Limitations.</b> Dots are placed approximately around ZIP code, tract and county centres. Visa, green-card and ICE detention data run on fiscal years, ICE removals on calendar years, and the Census counts years ending 1 July.</p>
 </main>

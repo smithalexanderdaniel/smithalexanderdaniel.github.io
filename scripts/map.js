@@ -7,19 +7,31 @@
 const NAVH = () => $("states").getBoundingClientRect().top;
 let ZOOM = 0, ZT = 0, SPINL = 0, SM_OVL = 1, LEVEL = -1, gDrag = null, wheelDir = 1, snapT = 0;
 /* the world's own camera: SPINL turns it (longitude), TILT tips it (latitude), ZK zooms in on a chosen country; TGT is where a click is taking it */
-let TILT = 22, ZK = 1, TGT = null, HOVC = -1, SELC = -1, FOCLIT = 0, FOCA = 0, LITF = -2;
+let TILT = 22, ZK = 1, TGT = null, HOVC = -1, HOVUS = false, USF = false, SELC = -1, FOCLIT = 0, FOCA = 0, LITF = -2, SPINF = 0;
 const smooth = (a, b, x) => { const t = clamp((x - a)/(b - a)); return t*t*(3 - 2*t); };
 const ovc = $("ov"), ov = ovc.getContext("2d");
 /* the level buttons sit at the top and the legend runs along the bottom: the maps fit between them (heights measured, not guessed) */
-const LEGW = () => 24, TOPM = () => Math.max(40, $("levels").getBoundingClientRect().bottom - NAVH() + 14), BOTM = () => $("legend").offsetHeight + 16;
+const LEGW = () => 24, TOPM = () => Math.max(40, $("levels").getBoundingClientRect().bottom - NAVH() + 14), BOTM = () => LEGH + 16;
+let LEGH = 60;   /* the legend's height, measured on load, resize and change of level only: it reflows when a country is hovered, and the globe must not resize with it */
+const measureLeg = () => { LEGH = $("legend").offsetHeight; USCK = ""; };
 
 // ---- cameras: the US fitted beside the legend; the world; a camera from one to the other
 const US_EDGE = [[-124.7,48.4],[-124.2,43],[-124.4,40.4],[-120.6,34.5],[-117.1,32.5],[-111,31.3],[-106.5,31.8],[-103,29],[-97.4,25.8],[-94,29.6],[-89.6,29.2],[-85,29.7],[-82.7,27.5],[-80.2,25.1],[-80,26.9],[-81,30.5],[-75.5,35.2],[-76,38],[-74,40.5],[-70,41.7],[-70.6,43],[-67,44.8],[-69.2,47.4],[-75,45],[-83,46],[-89,48],[-95,49],[-122,49]];
-let USC = null, USCK = "";
-function usCam() { const key = W + "x" + H + "x" + TOPM() + "x" + BOTM(); if (USCK === key) return {...USC}; const lon0 = -96.5, lat0 = 38.2, L0 = lon0*D2R, B0 = lat0*D2R; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+/* the US map shows the lower 48 only (the legend says Alaska and Hawaii are not shown): their regions get cameras far off screen, so nothing of them is drawn or hit.
+   USK, USTX, USTY are the US map's own zoom (1-2x) and pan: one scale and shift of the whole picture */
+let USC = null, USCK = "", USK = 1, USTX = 0, USTY = 0, usHold = -1e9;
+const US_OFF = {lon: -96.5, lat: 38.2, R: 1e-3, cx: -1e5, cy: -1e5};
+function usBase() { const key = W + "x" + H + "x" + TOPM() + "x" + BOTM(); if (USCK === key) return USC.map(c => ({...c})); const lon0 = -96.5, lat0 = 38.2, L0 = lon0*D2R, B0 = lat0*D2R; let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
   for (const [lo, la] of US_EDGE) { const p = v3(lo, la), cl = Math.cos(L0), sl = Math.sin(L0), cb = Math.cos(B0), sb = Math.sin(B0), x = cl*p[0] - sl*p[2], y = -sl*sb*p[0] + cb*p[1] - cl*sb*p[2]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   const top = TOPM(), bot = BOTM(), L = 30, Rr = LEGW() + 10, R = Math.min((W - L - Rr)/(x1 - x0), (H - top - bot)/(y1 - y0));
-  USC = {lon: lon0, lat: lat0, R, cx: L + (W - L - Rr)/2 - (x0 + x1)/2*R, cy: top + (H - top - bot)/2 + (y0 + y1)/2*R}; USCK = key; return {...USC}; }
+  const main = {lon: lon0, lat: lat0, R, cx: L + (W - L - Rr)/2 - (x0 + x1)/2*R, cy: top + (H - top - bot)/2 + (y0 + y1)/2*R};
+  USC = [main, {...US_OFF}, {...US_OFF}]; USCK = key; return USC.map(c => ({...c})); }
+const usCam = () => usBase()[0];
+const usViews = () => usBase().map(c => ({...c, R: c.R*USK, cx: c.cx*USK + USTX, cy: c.cy*USK + USTY}));
+/* zoom by f about a point on screen, and pan; the picture always covers the view, so at 1x it cannot move */
+const usClamp = () => { if (USK < 1 + 1e-3) { USK = 1; USTX = USTY = 0; return; } USTX = clamp(USTX, W*(1 - USK), 0); USTY = clamp(USTY, H*(1 - USK), 0); };
+function usZoom(f, px, py) { const k = clamp(USK*f, 1, 2); f = k/USK; USTX = (USTX - px)*f + px; USTY = (USTY - py)*f + py; USK = k; usClamp(); }
+function usPan(dx, dy) { USTX += dx; USTY += dy; usClamp(); }
 const camMix = (a, b, u) => { const dl = ((b.lon - a.lon + 540) % 360) - 180; return {lon: a.lon + dl*u, lat: lerp(a.lat, b.lat, u), R: Math.exp(lerp(Math.log(a.R), Math.log(b.R), u)), cx: lerp(a.cx, b.cx, u), cy: lerp(a.cy, b.cy, u)}; };
 /* the world: clear of the legend, with room around it for the arcs that rise off the globe */
 function worldCam() { const L = 30, Rr = LEGW(), top = TOPM() + 30, bot = BOTM() + 10, aw = W - L - Rr, ah = H - top - bot;
@@ -31,7 +43,7 @@ let DETG = null;   /* the people held by ICE, 2025, as dots at their facilities 
 function detGL() { if (DETG) return DETG; const a = [], F = window.DET.f, yi = DETY.indexOf(2025);
   for (const d of DETP) { if (STS.detState[d.f] < 0 || d.j >= Math.round(F[d.f][2][yi])) continue; pushDot(a, d.p, d.p, hex(REDS[d.k]), 255, 7, 0); } return DETG = dotBuf(new Float32Array(a)); }
 /* with a country in focus (hovered or chosen) every dot not going to or from it dims (FOCLIT), and the arcs, which cannot be told apart by country, fade (FOCA) */
-const dots = (B, tr, a) => drawDots(B, {tr, alpha: a, size: 1, glow: false, lit: FOCLIT, dimA: .07}), lines = (B, tr, a) => drawLines(B, {tr, alpha: a*(1 - FOCA)});
+const dots = (B, tr, a) => drawDots(B, {tr, alpha: a, size: 1, glow: false, lit: FOCLIT, dimA: .18}), lines = (B, tr, a) => drawLines(B, {tr, alpha: a, lit: FOCLIT, dim: .12, hi: USF ? 2 : 4});
 const visaCat = (t, name) => ({k: "v" + t, g: "imm", name, col: TFAM[t][0], total: () => NIV(t), unit: "visas issued, 2024 · 1 dot = 50",
   draw: (a, tr) => { const B = typeBuf(t); lines(B.lines, tr, .055*a); dots(B.dots, tr, .85*a); }});
 const CATS = [visaCat(0, "Visitors"), visaCat(1, "Students"), visaCat(2, "Exchange"), visaCat(3, "H-1B"), visaCat(4, "Other work"), visaCat(5, "Other visas"),
@@ -40,9 +52,7 @@ const CATS = [visaCat(0, "Visitors"), visaCat(1, "Students"), visaCat(2, "Exchan
   {k: "ice", g: "dep", name: "ICE removals", col: "#ff5a40", total: () => REM25, unit: "removals that began with an ICE arrest, 2025 · 1 dot = 1 removal",
    draw: (a, tr) => { const B = iceRem(); lines(B.lines, tr, .5*a); dots(B.dots, tr, .95*a); }},
   {k: "bp", g: "dep", name: "BPS removals", col: "#c41e3a", total: () => BP.border, unit: "removals after a border arrest, 2024 · 1 dot = 1 removal; destinations estimated",
-   draw: (a, tr) => { const B = bpb(); lines(B.lines, tr, .5*a); dots(B.dots, tr, .95*a); }},
-  {k: "det", g: "dep", name: "Held by ICE", col: "#ff7a62", total: () => DET25, unit: "held on an average day, 2025 · 1 dot = 1 person",
-   draw: (a) => drawDots(detGL(), {tr: 2, alpha: .95*a, size: 1.3, glow: false, lit: FOCLIT, dimA: .07})}];
+   draw: (a, tr) => { const B = bpb(); lines(B.lines, tr, .5*a); dots(B.dots, tr, .95*a); }}];   /* ICE detention is shown on the US map only, not on the globes */
 // the US map's own layers (map-layers.js draws them)
 const US_ROWS = [["nim", "imm", "#8fd3ff", "Net arrivals since 2001"], ["gc", "imm", "#3ddc84", "New green cards"], ["h1b", "imm", "#ff45c5", "H-1B approvals"],
   ["stu", "imm", "#f2e640", "International students"], ["det", "dep", "#ff5a40", "Held by ICE, average day"], ["bp", "dep", "#c41e3a", "BPS removals"]];
@@ -67,13 +77,14 @@ function legendPaint() { const lvl = ZOOM < .5 ? 0 : 1, Y = Math.floor(smYear + 
   const V = lvl ? worldVals(F) : usVals(smSel, Y), usName = (k, name) => { const est = k === "bp" && smSel >= 0, yr = YR[k] && YR[k] !== Y && V[k] != null ? YR[k] : null;
     return name + (est || yr ? ` (${[est ? "est." : "", yr || ""].filter(Boolean).join(", ")})` : ""); };
   const rows = lvl ? CATS.map(c => [c.k, c.g, c.col, c.k === "bp" && F >= 0 ? "BPS removals (est.)" : c.name]) : US_ROWS.map(([k, g, col, name]) => [k, g, col, usName(k, name)]);
-  const title = lvl ? (F >= 0 ? C[F].n : "World") : smSel >= 0 ? STS.states[smSel].n : "United States", sub = lvl ? "2024–2025" : String(Y);
+  /* on the globes the header names only a country in focus (nothing otherwise), and the years sit on the bottom line beside the dot scale */
+  const title = lvl ? (F >= 0 ? C[F].n : F === -3 ? "United States" : "") : smSel >= 0 ? STS.states[smSel].n : "United States", sub = lvl ? "" : String(Y);
   const solo = g => GROUP[g].every(k => LAY[k]) && GROUP[g === "imm" ? "dep" : "imm"].every(k => !LAY[k]), num = v => v == null ? "–" : fmtBig(v);
   let h = `<div class="lh"><b>${title}</b><span>${sub}</span></div>`;
   for (const g of ["imm", "dep"]) { h += `<div class="lg"><button type="button" class="grp" data-g="${g}" aria-pressed="${solo(g)}" title="${solo(g) ? "Show every layer" : "Show only these"}"><b>${g === "imm" ? "Immigration" : "Deportation"}</b></button>`;
     for (const [k, gg, col, name] of rows) if (gg === g) h += `<button type="button" data-k="${k}" aria-pressed="${!!LAY[k]}" class="${LAY[k] ? "" : "off"}"><i style="background:${col}"></i><span>${name}</span><em>${num(V[k])}</em></button>`; h += `</div>`; }
   legRows.innerHTML = h; $("scwrap").hidden = lvl > 0;
-  $("legunit").textContent = lvl ? "1 dot = 1 person · visas: 1 dot = 50" : "1 dot = 1 person"; }
+  $("legunit").innerHTML = lvl ? `<span class="ly">2024–2025</span>1 dot = 1 person · visas: 1 dot = 50` : "1 dot = 1 person · Alaska and Hawaii not shown."; }
 /* repainted only when what it shows changes: the level, the place, the year or a layer */
 function legendTick(F) { LEGF = F; const key = (ZOOM < .5 ? 0 : 1) + "|" + smSel + "|" + Math.floor(smYear + 1e-6) + "|" + F + "|" + Object.values(LAY).map(Number).join(""); if (key !== LEGKEY) { LEGKEY = key; legendPaint(); } }
 legRows.addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; e.stopPropagation();
@@ -89,6 +100,10 @@ levelBtns.forEach(b => b.onclick = () => { if (smSel >= 0) smBack(); countryPick
 addEventListener("wheel", e => { if (e.target.closest && e.target.closest("#legend, #levels, .nav, #cpanel")) return; if (smSel >= 0 && ZOOM < .02) return;   /* in a state, the map zooms itself */
   e.preventDefault(); const dy = e.deltaY*(e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1); if (!dy) return;
   if (SELC >= 0) { if (dy < 0) return; countryPick(-1); }   /* with a country chosen on the globe, zooming in stays on it; zooming out lets it go */
+  /* on the US map, the map zooms first, up to twice as close, about the pointer; scrolling out brings it back to its size before going on to the globe */
+  if (ZOOM < .02 && Math.abs(ZT) < .01 && smSel < 0) { const now = performance.now();
+    if (dy < 0 || USK > 1 + 1e-3) { usZoom(Math.exp(-dy*.0015), e.clientX, e.clientY - NAVH()); if (USK === 1) usHold = now; clearTimeout(snapT); return; }
+    if (now - usHold < 350) { usHold = now; return; } }   /* back at 1x, the same scroll stops there; the next one goes on to the globe */
   /* on the world the globe itself zooms first, up to twice as close; only then does scrolling in go on to the US map
      (and scrolling out first brings the globe back to its size before it splits in two) */
   if (Math.abs(ZT - 1) < .01 && !TGT) {
@@ -103,13 +118,15 @@ const onWorld = () => Math.abs(ZOOM - 1) < .04, ctip = $("ctip"), cpanel = $("cp
 glc.addEventListener("pointerdown", e => { if (ZOOM < .3) return; gDrag = {x: e.clientX, y: e.clientY, s: SPINL, t: TILT, moved: false}; TGT = null; glc.setPointerCapture(e.pointerId); });
 glc.addEventListener("pointermove", e => { if (gDrag) { const dx = e.clientX - gDrag.x, dy = e.clientY - gDrag.y; if (Math.abs(dx) + Math.abs(dy) > 4) gDrag.moved = true;
     if (gDrag.moved) { const R = Math.max(60, CAM.R); SPINL = gDrag.s - dx/R/D2R; TILT = clamp(gDrag.t + dy/R/D2R, -70, 80); ctip.style.opacity = 0; } return; }
-  if (!onWorld()) { HOVC = -1; ctip.style.opacity = 0; return; } const ll = unproj(e.offsetX, e.offsetY), ci = ll ? BYSID.get(maskAt(ll[0], ll[1])) : undefined;
-  HOVC = ci != null && ci !== US ? ci : -1; glc.style.cursor = HOVC >= 0 ? "pointer" : "grab";
+  if (!onWorld()) { HOVC = -1; ctip.style.opacity = 0; return; } const ll = unproj(e.offsetX, e.offsetY), sid = ll ? maskAt(ll[0], ll[1]) : -1, ci = sid >= 0 ? BYSID.get(sid) : undefined;
+  HOVUS = USSID >= 0 && sid === USSID; HOVC = !HOVUS && ci != null && ci !== US ? ci : -1; glc.style.cursor = HOVC >= 0 || HOVUS ? "pointer" : "grab";
   if (HOVC < 0 || HOVC === SELC) { ctip.style.opacity = 0; return; } const s = cStats(HOVC);
   ctip.innerHTML = `<b>${C[HOVC].n}</b>${fmtBig(s.vis)} visas issued, 2024${s.gc ? `<br>${fmtBig(s.gc)} green cards, 2024` : ""}${s.ice ? `<br><span class="r">${fmtBig(s.ice)} ICE removals, 2025</span>` : ""}<br><em>click to zoom in</em>`;
   ctip.style.left = Math.min(W - 240, e.offsetX + 16) + "px"; ctip.style.top = (e.offsetY + NAVH() + 12) + "px"; ctip.style.opacity = 1; });
-glc.addEventListener("pointerup", () => { const d = gDrag; gDrag = null; if (d && !d.moved && onWorld()) countryPick(HOVC >= 0 && HOVC !== SELC ? HOVC : -1); });
-glc.addEventListener("pointerleave", () => { if (!gDrag) { HOVC = -1; ctip.style.opacity = 0; } });
+glc.addEventListener("pointerup", () => { const d = gDrag; gDrag = null; if (!d || d.moved || !onWorld()) return;
+  if (HOVUS) { countryPick(-1); HOVUS = false; TGT = {k: 1}; ZT = 0; return; }   /* the US: on to the US map */
+  countryPick(HOVC >= 0 && HOVC !== SELC ? HOVC : -1); });
+glc.addEventListener("pointerleave", () => { if (!gDrag) { HOVC = -1; HOVUS = false; ctip.style.opacity = 0; } });
 /* a country's numbers: visas issued by type and green cards by country of birth (2024), removals sent to it (ICE 2025; BPS 2024, estimated) */
 const GCBY = new Map(); for (const f of window.LPRG) GCBY.set(f[0], (GCBY.get(f[0]) || 0) + f[3]); for (const f of window.LPRG_REST.flows) GCBY.set(f[0], (GCBY.get(f[0]) || 0) + f[2]);
 function cStats(ci) { const c = C[ci], v = c.v[VI], rows = D.rem.years["2025"].filter(r => r[1] === c.n), bp = BP.countries.find(x => x[0] === c.n), st = new Map(); for (const r of rows) st.set(r[0], (st.get(r[0]) || 0) + r[2]);
@@ -124,7 +141,8 @@ function countryPick(ci) { if (ci === SELC) return; SELC = ci; ctip.style.opacit
   cpanel.querySelector(".x").onclick = () => countryPick(-1); cpanel.classList.add("on"); }
 /* the dots of the country in focus stay lit; the rest dim (the engine's per-country switch, LIT) */
 function focusLit(F) { if (F === LITF) return; LITF = F; for (let i = 0; i < 256; i++) LIT[i*4] = F < 0 || i === F ? 255 : 100; for (let t = 0; t < 256; t++) LIT[(256 + t)*4] = 255; pushLit(); }
-function outlineCountry(ci, a) { const sh = SH[C[ci].sid]; if (!sh) return; ov.save(); ov.strokeStyle = `rgba(236,230,216,${a})`; ov.lineWidth = 1; ov.lineJoin = "round";
+function outlineCountry(ci, a) { outlineShape(C[ci].sid, a); }
+function outlineShape(sid, a) { const sh = SH[sid]; if (!sh) return; ov.save(); ov.strokeStyle = `rgba(236,230,216,${a})`; ov.lineWidth = 1; ov.lineJoin = "round";
   for (const r of sh[1]) { ov.beginPath(); let pen = false; for (const [lo, la] of r) { const q = proj(v3(lo, la)); if (q[2] < 0) { pen = false; continue; } pen ? ov.lineTo(q[0], q[1]) : ov.moveTo(q[0], q[1]); pen = true; } ov.stroke(); } ov.restore(); }
 
 // ---- immigration v deportation: two globes side by side (one above the other on a phone), each with its own group of layers
@@ -136,27 +154,34 @@ function sideCell(i) { const L = 30, Rr = LEGW(), aw = W - L - Rr, top = TOPM() 
 // ---- each frame
 let last = 0;
 function resize() { DPR = Math.min(2, devicePixelRatio || 1); W = innerWidth; H = Math.max(200, innerHeight - NAVH());
-  for (const c of [glc, ovc]) { c.width = Math.round(W*DPR); c.height = Math.round(H*DPR); } gl.viewport(0, 0, glc.width, glc.height); USCK = ""; if (smSel < 0) smCam = usCam(); legendPaint(); }
+  GDPR = DPR;   /* the globe at the screen's density too (up to 2x): sharper dots and arcs; the globe's cost is in its vertices, not its pixels */
+  ovc.width = Math.round(W*DPR); ovc.height = Math.round(H*DPR); glc.width = Math.round(W*GDPR); glc.height = Math.round(H*GDPR); gl.viewport(0, 0, glc.width, glc.height);   /* the globe at 1x (GDPR), labels and outlines at the screen's density */ USCK = ""; legendPaint(); measureLeg(); USK = 1; USTX = USTY = 0; if (smSel < 0) { smCams = usViews(); smCam = smCams[0]; } }
 function frame(now) { const dt = last ? Math.min(.1, (now - last)/1000) : 0; last = now;
   if (Math.abs(ZT - ZOOM) > 1e-4) ZOOM += (ZT - ZOOM)*Math.min(1, dt*3.6); else ZOOM = ZT; const z = ZOOM;
-  const lvl = z < .5 ? 0 : z < 1.5 ? 1 : 2; if (lvl !== LEVEL) { const was = LEVEL; LEVEL = lvl; levelBtns.forEach((b, i) => b.setAttribute("aria-pressed", i === lvl));    $("hint").textContent = lvl === 2 ? "Scroll in to go back" : "Scroll to zoom out"; if ((was === 0) !== (lvl === 0) || was < 0) legendPaint(); }
+  const lvl = z < .5 ? 0 : z < 1.5 ? 1 : 2; if (lvl !== LEVEL) { const was = LEVEL; LEVEL = lvl; levelBtns.forEach((b, i) => b.setAttribute("aria-pressed", i === lvl));    $("hint").textContent = lvl === 2 ? "Scroll in to go back" : "Scroll to zoom out"; if ((was === 0) !== (lvl === 0) || was < 0) { legendPaint(); measureLeg(); } }
   if (SELC >= 0 && Math.abs(ZT - 1) > .01) countryPick(-1);   /* leaving the world lets go of the country */
   if (z < .03 && ZK !== 1 && !TGT) ZK = 1;   /* back on the US map, the globe's own zoom resets for next time */
   if (TGT) { const k = Math.min(1, dt*3); if (TGT.lon != null) { SPINL += (((TGT.lon - SPINL + 540) % 360) - 180)*k; TILT += (TGT.lat - TILT)*k; } else TILT += (22 - TILT)*k*.5; ZK += (TGT.k - ZK)*k;
     if (Math.abs(TGT.k - ZK) < .002 && (TGT.lon == null || Math.abs(((TGT.lon - SPINL + 540) % 360) - 180) < .05)) { ZK = TGT.k; TGT = null; } }
-  if (z > .98 && !gDrag && !TGT && SELC < 0 && HOVC < 0) SPINL += dt*2.6;   /* the world turns slowly, and stops for a country in focus */
-  const F = onWorld() ? (SELC >= 0 ? SELC : HOVC) : -1; FOCLIT = F >= 0 ? 1 : 0; if (F >= 0) focusLit(F); FOCA += ((F >= 0 ? 1 : 0) - FOCA)*Math.min(1, dt*6); legendTick(F);
+  if (z > .98 && !gDrag && !TGT && SELC < 0 && HOVC < 0 && !HOVUS) SPINL += dt*2.6;   /* the world turns slowly, and stops for a country in focus */
+  const F = onWorld() ? (SELC >= 0 ? SELC : HOVC) : -1; USF = HOVUS && onWorld() && SELC < 0;   /* the US in focus: all its trajectories, its numbers in the legend (-3) */
+  FOCLIT = F >= 0 || USF ? 1 : 0; if (F >= 0 || USF) focusLit(F); FOCA += ((F >= 0 ? 1 : 0) - FOCA)*Math.min(1, dt*6); legendTick(USF ? -3 : F);
+  /* when the only thing moving is the globe's slow turn, it is redrawn every other frame (about 30 a second): the same motion for half the work.
+     The globe canvas keeps its last picture in between (preserveDrawingBuffer) */
+  const spinOnly = z > .98 && Math.abs(ZT - z) < 1e-4 && !gDrag && !TGT && F < 0 && FOCA < .01 && SELC < 0 && !HOVUS;
+  if (spinOnly && (++SPINF & 1)) { requestAnimationFrame(frame); return; }
   // the US map: on its own at level 0; zooming out, the same map is drawn with the shared camera while it shrinks into the globe
   const smc = $("smc"); smc.style.pointerEvents = z < .02 ? "auto" : "none"; glc.style.cursor = z < .3 ? "default" : gDrag ? "grabbing" : "grab";
   if (z < .002) { smc.style.opacity = 1; glc.style.opacity = 0; smTick(dt, false); ov.setTransform(1, 0, 0, 1, 0, 0); ov.clearRect(0, 0, ovc.width, ovc.height); requestAnimationFrame(frame); return; }
   if (smYear < 2025) smYear = Math.min(2025, smYear + dt*10); smPlay = false; smScrub.value = smYear; smYr.textContent = Math.floor(smYear + 1e-6);
-  CAM = z <= 1 ? camMix(usCam(), worldCam(), ease(z)) : worldCam(); ROT = rot(CAM);
+  if (z > .8 && USK !== 1) { USK = 1; USTX = USTY = 0; }   /* the US map is out of sight: next time it opens whole */
+  CAM = z <= 1 ? camMix(usViews()[0], worldCam(), ease(z)) : worldCam(); ROT = rot(CAM);
   SM_OVL = 1 - smooth(0, .45, z); const smA = 1 - smooth(.35, .8, z); smc.style.opacity = smA.toFixed(3); if (smA > .005) smTick(0, true);
   // the globe
   glc.style.opacity = 1; gl.clearColor(.0196, .0314, .051, 1); gl.clear(gl.COLOR_BUFFER_BIT); ov.setTransform(DPR, 0, 0, DPR, 0, 0); ov.clearRect(0, 0, W, H);
   if (z <= 1) { const gA = smooth(.2, .75, z), tr = 2*smooth(.3, 1, z); drawBg(gA); drawDots(LAND, {tr: 2, size: 1, alpha: .7*gA, glow: false});
     for (const c of CATS) if (LAY[c.k] && gA > .01) c.draw(gA, tr);
-    if (F >= 0) outlineCountry(F, F === SELC ? .85 : .5); }
+    if (F >= 0) outlineCountry(F, .95); if (HOVUS && onWorld()) outlineShape(USSID, .95); }
   else { const u = ease(z - 1), w0 = worldCam(); if (u < 1) { CAM = w0; ROT = rot(CAM); drawBg(1 - u); }
     // the world splits in two: immigration (visas and green cards) on the left, deportation (removals and detention) on the right
     SIDES.forEach((s, i) => { const p = sideCell(i), list = CATS.filter(c => c.g === s.g); CAM = {lon: w0.lon, lat: w0.lat, R: lerp(w0.R, p.R, u), cx: lerp(w0.cx, p.x, u), cy: lerp(w0.cy, p.y, u)}; ROT = rot(CAM);
@@ -172,8 +197,16 @@ const CGF = "'Century Gothic', CenturyGothic, AppleGothic, 'URW Gothic', sans-se
 const fmtBig = n => n >= 1e6 ? (n/1e6).toFixed(2) + "M" : n >= 1e4 ? Math.round(n/1e3) + "k" : Math.round(n).toLocaleString("en-US");
 
 addEventListener("resize", resize); resize(); gl.enable(gl.BLEND); smReset(); legendPaint();
+smTick(0, false);   /* the US map's image exists from the start, so a zoom from the globe back to the US has it to scale */
 /* a link can open the map at a level: map.html?z=1 (the world) or ?z=2 (by category) */
 { const Q = new URLSearchParams(location.search), z = +Q.get("z"); if (z > 0) { ZT = ZOOM = clamp(z, 0, 2); smYear = 2025; }
   const cn = Q.get("country"), ci = cn ? C.findIndex(c => c.n.toLowerCase() === cn.toLowerCase()) : -1;   /* ...&country=India opens the world on that country */
   if (ci >= 0 && ci !== US) { ZT = ZOOM = 1; smYear = 2025; countryPick(ci); SPINL = TGT.lon; TILT = TGT.lat; ZK = TGT.k; TGT = null; } }
+/* the globe's layers are built ahead of time, one at a time, while the US map is on screen and quiet (the opening replay over, no input for a moment),
+   so zooming out never waits for them; whatever is not built yet when the globe is reached is built then, as before. Green cards, the heaviest, last */
+const PREBUILD = [0, 1, 2, 3, 4, 5].map(t => () => typeBuf(t)).concat([() => iceRem(), () => bpb(), () => lprgBuf()]);
+let lastInput = performance.now(); for (const ev of ["pointermove", "pointerdown", "wheel", "keydown"]) addEventListener(ev, () => { lastInput = performance.now(); }, {passive: true, capture: true});
+function prebuild() { if (!PREBUILD.length) return; const quiet = !smPlay && ZOOM < .02 && ZT < .02 && performance.now() - lastInput > 700;
+  if (quiet) PREBUILD.shift()(); setTimeout(prebuild, quiet ? 50 : 400); }
+setTimeout(prebuild, 1000);
 $("loading").hidden = true; requestAnimationFrame(frame);

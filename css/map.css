@@ -4,7 +4,7 @@ body.mappage{overflow:hidden;height:100vh}
 #gl,#ov{width:100%;height:calc(100% - var(--nav-h));display:block}
 #gl{z-index:1;opacity:0;transition:opacity .3s}
 #states{z-index:2;pointer-events:none}
-#smc{position:absolute;inset:0;width:100%;height:100%;cursor:default;pointer-events:auto}#smc.on{cursor:pointer}
+#smc{position:absolute;inset:0;width:100%;height:100%;cursor:default;pointer-events:auto}#smc.pan{cursor:grab}#smc.pan:active{cursor:grabbing}#smc.on{cursor:pointer}
 #ov{z-index:3;pointer-events:none}
 .mui{position:fixed;z-index:10}
 #loading{left:50%;top:50%;transform:translate(-50%,-50%);color:var(--ink2);font-size:14px;margin:0}
@@ -37,6 +37,7 @@ body.mappage{overflow:hidden;height:100vh}
 #legend .sc input{flex:1;accent-color:#8fd3ff;cursor:pointer;margin:0}
 #legend .sc b{font:400 12px var(--font);color:var(--ink);min-width:32px;text-align:right;font-variant-numeric:tabular-nums}
 #legunit{font-size:10.5px;color:var(--ink3);margin:0;white-space:nowrap}
+#legunit .ly{color:var(--ink2);margin-right:14px}   /* the globes' years, on the same line as the dot scale */
 
 /* the legend carries every number; the state panel, the country panel and the country tip are not shown */
 #smpanel,#cpanel,#ctip{display:none!important}
